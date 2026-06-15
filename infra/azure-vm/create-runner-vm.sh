@@ -46,13 +46,16 @@ if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
   az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 fi
 
-if [[ "${AZURE_IGNORE_ENV_ZONE:-0}" == "1" ]]; then
+if [[ "${AZURE_USE_ZONES:-0}" != "1" ]]; then
   AZURE_ZONE=""
+  AZURE_FALLBACK_ZONES=""
 fi
 
 if [[ -n "${AZURE_ZONE:-}" ]]; then
   echo "Using AZURE_ZONE=$AZURE_ZONE from config or environment."
-  echo "Unset AZURE_ZONE to try regional VM placement before zonal placement."
+  echo "Set AZURE_USE_ZONES=0 or unset AZURE_ZONE to try regional VM placement."
+else
+  echo "Using regional VM placement. Set AZURE_USE_ZONES=1 to try zonal placement."
 fi
 
 RUNNER_TOKEN="$(gh api -X POST "repos/${repo}/actions/runners/registration-token" --jq .token)"
