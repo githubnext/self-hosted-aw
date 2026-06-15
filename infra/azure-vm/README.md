@@ -17,7 +17,8 @@ export AZURE_RESOURCE_GROUP=gh-aw-demo-runners
 export AZURE_LOCATION=westus3
 export AZURE_VM_NAME=gh-aw-azure-runner-01
 export AZURE_VM_SIZE=Standard_B2ms
-# Optional: set AZURE_ZONE=1, 2, or 3 if Azure reports regional capacity restrictions.
+# Optional: set AZURE_ZONE=1, 2, or 3 if Azure reports zonal capacity restrictions.
+# If Azure reports regional SKU capacity restrictions, set AZURE_LOCATION=eastus or another region.
 
 infra/azure-vm/create-runner-vm.sh
 ```

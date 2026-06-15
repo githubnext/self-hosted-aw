@@ -52,6 +52,7 @@ fi
 vm_create_args=(
   --resource-group "$AZURE_RESOURCE_GROUP"
   --name "$AZURE_VM_NAME"
+  --location "$AZURE_LOCATION"
   --image Ubuntu2404
   --size "$AZURE_VM_SIZE"
   --admin-username "$AZURE_ADMIN_USER"
