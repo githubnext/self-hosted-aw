@@ -1,0 +1,35 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - iptables
+  - jq
+  - sudo
+  - tar
+  - unzip
+
+users:
+  - default
+  - name: actions
+    groups: sudo,docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - . /etc/os-release && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker
+  - usermod -aG docker actions
+  - install -o actions -g actions -m 0755 -d /opt/actions-runner
+  - sudo -u actions bash -lc 'cd /opt/actions-runner && curl -fsSL -o actions-runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"'
+  - sudo -u actions bash -lc 'cd /opt/actions-runner && tar xzf actions-runner.tar.gz'
+  - sudo -u actions bash -lc 'cd /opt/actions-runner && ./config.sh --unattended --replace --url "https://github.com/${GITHUB_REPOSITORY}" --token "${RUNNER_TOKEN}" --name "${RUNNER_NAME}" --labels "self-hosted,linux,x64,azure,gh-aw"'
+  - bash -lc 'cd /opt/actions-runner && ./svc.sh install actions && ./svc.sh start'
