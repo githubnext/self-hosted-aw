@@ -10,18 +10,28 @@ self-hosted,linux,x64,azure,gh-aw
 
 ## Create A Runner VM
 
+Runner settings live in `infra/azure-vm/runner.conf`:
+
+```sh
+: "${AZURE_RESOURCE_GROUP:=gh-aw-demo-runners}"
+: "${AZURE_LOCATION:=eastus}"
+: "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
+: "${AZURE_VM_SIZE:=Standard_B2ms}"
+```
+
 From the repository root:
 
 ```bash
-export AZURE_RESOURCE_GROUP=gh-aw-demo-runners
-export AZURE_LOCATION=westus3
-export AZURE_VM_NAME=gh-aw-azure-runner-01
-export AZURE_VM_SIZE=Standard_B2ms
-# Optional: set AZURE_ZONE=1, 2, or 3 if Azure reports zonal capacity restrictions.
-# If Azure reports regional SKU capacity restrictions, set AZURE_LOCATION=eastus or another region.
-
 infra/azure-vm/create-runner-vm.sh
 ```
+
+To use a different config file, set `AZURE_RUNNER_CONFIG`:
+
+```bash
+AZURE_RUNNER_CONFIG=infra/azure-vm/runner.local.conf infra/azure-vm/create-runner-vm.sh
+```
+
+The config file uses shell default assignments so GitHub Actions environment variables or matrix values can override the committed defaults without editing the file.
 
 The helper obtains a short-lived GitHub runner registration token with `gh api`, renders `cloud-init.template.yaml`, and creates the VM with Docker, sudo, iptables, and the runner service configured.
 
@@ -35,5 +45,6 @@ gh aw run azure-vm-openrouter
 ## Clean Up
 
 ```bash
+. infra/azure-vm/runner.conf
 az group delete --name "$AZURE_RESOURCE_GROUP"
 ```

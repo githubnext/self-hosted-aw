@@ -15,7 +15,7 @@ The repo has three demo lanes:
 - `.github/workflows/runner-capability-smoke.yml` - deterministic GitHub Actions smoke test for runner labels and OpenRouter.
 - `scripts/check-gh-aw-runner.sh` - validates the self-hosted runner requirements needed by `gh-aw`.
 - `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
-- `infra/azure-vm/` - Azure VM bootstrap helper and cloud-init template.
+- `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
 ## Prerequisites

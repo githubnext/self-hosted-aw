@@ -1,19 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+config_file="${AZURE_RUNNER_CONFIG:-${script_dir}/runner.conf}"
+
+if [[ -f "$config_file" ]]; then
+  # shellcheck source=/dev/null
+  . "$config_file"
+else
+  echo "Azure runner config file not found: $config_file" >&2
+  echo "Set AZURE_RUNNER_CONFIG to another config path if needed." >&2
+  exit 1
+fi
+
 repo="${GITHUB_REPOSITORY:-}"
 if [[ -z "$repo" ]]; then
   repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 fi
 
-: "${AZURE_RESOURCE_GROUP:=gh-aw-demo-runners}"
-: "${AZURE_LOCATION:=westus3}"
-: "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
-: "${AZURE_VM_SIZE:=Standard_B2ms}"
-: "${AZURE_ZONE:=}"
-: "${AZURE_ADMIN_USER:=azureuser}"
-: "${RUNNER_VERSION:=2.329.0}"
-: "${RUNNER_NAME:=${AZURE_VM_NAME}}"
+for required_var in \
+  AZURE_RESOURCE_GROUP \
+  AZURE_LOCATION \
+  AZURE_VM_NAME \
+  AZURE_VM_SIZE \
+  AZURE_ADMIN_USER \
+  RUNNER_VERSION \
+  RUNNER_NAME; do
+  if [[ -z "${!required_var:-}" ]]; then
+    echo "Required config value is missing: $required_var" >&2
+    exit 1
+  fi
+done
 
 command -v az >/dev/null 2>&1 || {
   echo "Azure CLI is required: https://learn.microsoft.com/cli/azure/install-azure-cli" >&2
@@ -25,8 +42,12 @@ command -v gh >/dev/null 2>&1 || {
   exit 1
 }
 
+if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
+  az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+fi
+
 RUNNER_TOKEN="$(gh api -X POST "repos/${repo}/actions/runners/registration-token" --jq .token)"
-export GITHUB_REPOSITORY="$repo" RUNNER_TOKEN RUNNER_VERSION RUNNER_NAME
+export GITHUB_REPOSITORY="$repo" RUNNER_TOKEN RUNNER_VERSION RUNNER_NAME CLOUD_INIT_TEMPLATE="${script_dir}/cloud-init.template.yaml"
 
 tmp_cloud_init="$(mktemp)"
 trap 'rm -f "$tmp_cloud_init"' EXIT
@@ -35,7 +56,7 @@ python3 - <<'PY' > "$tmp_cloud_init"
 import os
 from pathlib import Path
 
-template = Path("infra/azure-vm/cloud-init.template.yaml").read_text()
+template = Path(os.environ["CLOUD_INIT_TEMPLATE"]).read_text()
 for key in ("GITHUB_REPOSITORY", "RUNNER_TOKEN", "RUNNER_VERSION", "RUNNER_NAME"):
     template = template.replace("${" + key + "}", os.environ[key])
 print(template)
