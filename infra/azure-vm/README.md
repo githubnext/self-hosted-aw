@@ -10,7 +10,11 @@ self-hosted,linux,x64,azure,gh-aw
 
 ## Create A Runner VM
 
-Runner settings live in `infra/azure-vm/runner.conf`:
+Runner settings live in `infra/azure-vm/runner.conf`. The committed default is the known-good demonstrator shape:
+
+```text
+westus2, Standard_D2s_v5, regional placement
+```
 
 ```sh
 : "${AZURE_SUBSCRIPTION_ID:=41035778-206b-4ce2-9ec4-07987c6a7e06}"
