@@ -46,6 +46,11 @@ if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
   az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 fi
 
+if [[ -n "${AZURE_ZONE:-}" ]]; then
+  echo "Using AZURE_ZONE=$AZURE_ZONE from config or environment."
+  echo "Unset AZURE_ZONE to try regional VM placement before zonal placement."
+fi
+
 RUNNER_TOKEN="$(gh api -X POST "repos/${repo}/actions/runners/registration-token" --jq .token)"
 export GITHUB_REPOSITORY="$repo" RUNNER_TOKEN RUNNER_VERSION RUNNER_NAME CLOUD_INIT_TEMPLATE="${script_dir}/cloud-init.template.yaml"
 
