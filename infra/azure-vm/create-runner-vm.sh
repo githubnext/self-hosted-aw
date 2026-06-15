@@ -9,7 +9,8 @@ fi
 : "${AZURE_RESOURCE_GROUP:=gh-aw-demo-runners}"
 : "${AZURE_LOCATION:=westus3}"
 : "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
-: "${AZURE_VM_SIZE:=Standard_D4s_v5}"
+: "${AZURE_VM_SIZE:=Standard_D2s_v5}"
+: "${AZURE_ZONE:=}"
 : "${AZURE_ADMIN_USER:=azureuser}"
 : "${RUNNER_VERSION:=2.329.0}"
 : "${RUNNER_NAME:=${AZURE_VM_NAME}}"
@@ -48,15 +49,22 @@ else
     --location "$AZURE_LOCATION"
 fi
 
-az vm create \
-  --resource-group "$AZURE_RESOURCE_GROUP" \
-  --name "$AZURE_VM_NAME" \
-  --image Ubuntu2404 \
-  --size "$AZURE_VM_SIZE" \
-  --admin-username "$AZURE_ADMIN_USER" \
-  --generate-ssh-keys \
-  --custom-data "$tmp_cloud_init" \
+vm_create_args=(
+  --resource-group "$AZURE_RESOURCE_GROUP"
+  --name "$AZURE_VM_NAME"
+  --image Ubuntu2404
+  --size "$AZURE_VM_SIZE"
+  --admin-username "$AZURE_ADMIN_USER"
+  --generate-ssh-keys
+  --custom-data "$tmp_cloud_init"
   --tags purpose=gh-aw-self-hosted-runner provider=azure
+)
+
+if [[ -n "$AZURE_ZONE" ]]; then
+  vm_create_args+=(--zone "$AZURE_ZONE")
+fi
+
+az vm create "${vm_create_args[@]}"
 
 echo "Created Azure runner VM: $AZURE_VM_NAME"
 echo "Run: gh workflow run runner-capability-smoke.yml -f target=azure"
