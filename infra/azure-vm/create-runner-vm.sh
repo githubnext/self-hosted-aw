@@ -9,7 +9,7 @@ fi
 : "${AZURE_RESOURCE_GROUP:=gh-aw-demo-runners}"
 : "${AZURE_LOCATION:=westus3}"
 : "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
-: "${AZURE_VM_SIZE:=Standard_D2s_v5}"
+: "${AZURE_VM_SIZE:=Standard_B2ms}"
 : "${AZURE_ZONE:=}"
 : "${AZURE_ADMIN_USER:=azureuser}"
 : "${RUNNER_VERSION:=2.329.0}"
