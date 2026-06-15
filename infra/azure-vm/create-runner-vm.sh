@@ -40,9 +40,13 @@ for key in ("GITHUB_REPOSITORY", "RUNNER_TOKEN", "RUNNER_VERSION", "RUNNER_NAME"
 print(template)
 PY
 
-az group create \
-  --name "$AZURE_RESOURCE_GROUP" \
-  --location "$AZURE_LOCATION"
+if az group show --name "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
+  echo "Using existing Azure resource group: $AZURE_RESOURCE_GROUP"
+else
+  az group create \
+    --name "$AZURE_RESOURCE_GROUP" \
+    --location "$AZURE_LOCATION"
+fi
 
 az vm create \
   --resource-group "$AZURE_RESOURCE_GROUP" \
