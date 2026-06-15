@@ -13,6 +13,7 @@ self-hosted,linux,x64,azure,gh-aw
 Runner settings live in `infra/azure-vm/runner.conf`:
 
 ```sh
+: "${AZURE_SUBSCRIPTION_ID:=41035778-206b-4ce2-9ec4-07987c6a7e06}"
 : "${AZURE_RESOURCE_GROUP:=gh-aw-demo-runners}"
 : "${AZURE_LOCATION:=eastus}"
 : "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
