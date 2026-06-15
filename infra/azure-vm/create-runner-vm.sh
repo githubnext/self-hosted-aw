@@ -58,6 +58,18 @@ else
   echo "Using regional VM placement. Set AZURE_USE_ZONES=1 to try zonal placement."
 fi
 
+if az vm show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_VM_NAME" >/dev/null 2>&1; then
+  echo "Azure runner VM already exists: $AZURE_VM_NAME"
+  az vm show \
+    --resource-group "$AZURE_RESOURCE_GROUP" \
+    --name "$AZURE_VM_NAME" \
+    --show-details \
+    --query '{name:name, location:location, size:hardwareProfile.vmSize, powerState:powerState, publicIp:publicIps}' \
+    -o table
+  echo "Run: gh workflow run runner-capability-smoke.yml -f target=azure"
+  exit 0
+fi
+
 RUNNER_TOKEN="$(gh api -X POST "repos/${repo}/actions/runners/registration-token" --jq .token)"
 export GITHUB_REPOSITORY="$repo" RUNNER_TOKEN RUNNER_VERSION RUNNER_NAME CLOUD_INIT_TEMPLATE="${script_dir}/cloud-init.template.yaml"
 
