@@ -18,6 +18,7 @@ Runner settings live in `infra/azure-vm/runner.conf`:
 : "${AZURE_LOCATION:=eastus}"
 : "${AZURE_VM_NAME:=gh-aw-azure-runner-01}"
 : "${AZURE_VM_SIZE:=Standard_B2ms}"
+: "${AZURE_IGNORE_ENV_ZONE:=1}"
 : "${AZURE_FALLBACK_LOCATIONS=eastus2 centralus southcentralus westus2}"
 : "${AZURE_FALLBACK_VM_SIZES=Standard_D2s_v5 Standard_D2as_v5 Standard_B2s}"
 : "${AZURE_FALLBACK_ZONES=}"
