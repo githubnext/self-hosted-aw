@@ -46,6 +46,10 @@ if [[ -n "${AZURE_SUBSCRIPTION_ID:-}" ]]; then
   az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 fi
 
+if [[ "${AZURE_IGNORE_ENV_ZONE:-0}" == "1" ]]; then
+  AZURE_ZONE=""
+fi
+
 if [[ -n "${AZURE_ZONE:-}" ]]; then
   echo "Using AZURE_ZONE=$AZURE_ZONE from config or environment."
   echo "Unset AZURE_ZONE to try regional VM placement before zonal placement."
