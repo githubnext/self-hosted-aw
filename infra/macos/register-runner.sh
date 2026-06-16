@@ -23,6 +23,23 @@ if [[ -z "$repo" ]]; then
   repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 fi
 
+default_host="$(
+  scutil --get LocalHostName 2>/dev/null ||
+    scutil --get ComputerName 2>/dev/null ||
+    hostname
+)"
+default_host="$(printf '%s' "$default_host" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]-' '-')"
+default_host="${default_host%-}"
+default_host="${default_host:-macos}"
+
+if [[ -z "${RUNNER_NAME:-}" ]]; then
+  RUNNER_NAME="${default_host}-local-model"
+fi
+
+if [[ -z "${RUNNER_DIR:-}" ]]; then
+  RUNNER_DIR="${HOME}/actions-runner-${RUNNER_NAME}"
+fi
+
 case "$(uname -m)" in
   arm64) runner_arch="arm64" ;;
   x86_64) runner_arch="x64" ;;
@@ -39,6 +56,18 @@ command -v gh >/dev/null 2>&1 || {
 
 if [[ -x "${RUNNER_DIR}/run.sh" ]]; then
   echo "macOS runner already exists: $RUNNER_DIR"
+  if [[ "$INSTALL_RUNNER_SERVICE" == "1" && -x "${RUNNER_DIR}/svc.sh" ]]; then
+    cd "$RUNNER_DIR"
+    service_status="$(./svc.sh status 2>&1 || true)"
+    if [[ "$service_status" == *"Started:"* ]]; then
+      echo "macOS runner service already running: $RUNNER_NAME"
+      exit 0
+    fi
+    ./svc.sh install >/dev/null 2>&1 || true
+    ./svc.sh start
+    echo "Installed and started macOS runner service: $RUNNER_NAME"
+    exit 0
+  fi
   echo "Start it with: cd \"$RUNNER_DIR\" && ./run.sh"
   exit 0
 fi

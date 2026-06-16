@@ -21,7 +21,7 @@ The repo has four demo lanes:
 - `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
 - `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
-- `infra/macos/` - macOS runner registration helper and local model notes.
+- `infra/macos/` - generic macOS runner registration/removal helpers and local model notes.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
 ## Prerequisites
