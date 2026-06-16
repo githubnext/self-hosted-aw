@@ -3,7 +3,7 @@ set -euo pipefail
 
 base_url="${LOCAL_OPENAI_BASE_URL:-${OPENAI_BASE_URL:-http://127.0.0.1:11434/v1}}"
 base_url="${base_url%/}"
-model="${LOCAL_OPENAI_MODEL:-${OPENAI_MODEL:-llama3.2}}"
+model="${LOCAL_OPENAI_MODEL:-${OPENAI_MODEL:-qwen2.5:0.5b}}"
 api_key="${LOCAL_OPENAI_API_KEY:-${OPENAI_API_KEY:-ollama}}"
 payload="$(mktemp)"
 response="$(mktemp)"

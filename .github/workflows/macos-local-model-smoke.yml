@@ -19,6 +19,6 @@ jobs:
       - name: Smoke test local OpenAI-compatible model
         env:
           LOCAL_OPENAI_BASE_URL: ${{ vars.LOCAL_OPENAI_BASE_URL || 'http://127.0.0.1:11434/v1' }}
-          LOCAL_OPENAI_MODEL: ${{ vars.LOCAL_OPENAI_MODEL || 'llama3.2' }}
+          LOCAL_OPENAI_MODEL: ${{ vars.LOCAL_OPENAI_MODEL || 'qwen2.5:0.5b' }}
           LOCAL_OPENAI_API_KEY: ${{ secrets.LOCAL_OPENAI_API_KEY }}
         run: bash scripts/smoke-local-openai-compatible.sh

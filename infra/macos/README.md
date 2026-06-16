@@ -45,14 +45,14 @@ http://127.0.0.1:11434/v1
 Install Ollama, start it, and pull a model:
 
 ```bash
-ollama pull llama3.2
+ollama pull qwen2.5:0.5b
 ```
 
 Set repository variables for another OpenAI-compatible local server:
 
 ```bash
 gh variable set LOCAL_OPENAI_BASE_URL --body "http://127.0.0.1:11434/v1"
-gh variable set LOCAL_OPENAI_MODEL --body "llama3.2"
+gh variable set LOCAL_OPENAI_MODEL --body "qwen2.5:0.5b"
 ```
 
 If the local server requires an API key, set:
