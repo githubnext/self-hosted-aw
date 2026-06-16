@@ -4,6 +4,8 @@ self-hosted-runner:
     - azure
     - cloudflare
     - gh-aw
+    - local-model
+    - macos-local
 
 # Configuration variables in array of strings defined in your repository or
 # organization. `null` means disabling configuration variables check.

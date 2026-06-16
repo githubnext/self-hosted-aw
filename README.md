@@ -2,11 +2,12 @@
 
 This repository demonstrates GitHub Agentic Workflows running on self-hosted GitHub Actions runners and using an OpenAI-compatible inference provider through OpenRouter.
 
-The repo has three demo lanes:
+The repo has four demo lanes:
 
 - Azure VM runner: a `gh-aw` workflow routed to `[self-hosted, linux, x64, azure]`.
 - Cloudflare runner lane: a `gh-aw` workflow routed to `[self-hosted, linux, x64, cloudflare]`, with an explicit capability check for Docker, sudo, iptables, and egress.
 - OpenRouter inference: Codex is configured with `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and `OPENAI_API_KEY=${{ secrets.OPENROUTER_API_KEY }}`.
+- macOS local model runner: a regular GitHub Actions workflow routed to `[self-hosted, macOS, macos-local, local-model]` and pointed at a local OpenAI-compatible endpoint such as Ollama.
 
 ## Repository Map
 
@@ -14,9 +15,13 @@ The repo has three demo lanes:
 - `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow for a Cloudflare-labeled runner lane.
 - `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
 - `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
+- `.github/workflows/macos-local-model-smoke.yml` - deterministic smoke test for a macOS local-model runner.
 - `scripts/check-gh-aw-runner.sh` - validates the self-hosted runner requirements needed by `gh-aw`.
 - `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
+- `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
+- `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
+- `infra/macos/` - macOS runner registration helper and local model notes.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
 ## Prerequisites
@@ -48,6 +53,7 @@ Register self-hosted runners with these labels:
 ```text
 self-hosted,linux,x64,azure,gh-aw
 self-hosted,linux,x64,cloudflare,gh-aw
+self-hosted,macOS,macos-local,local-model
 ```
 
 `gh-aw` self-hosted runners must be Linux hosts with Docker, passwordless sudo for the runner service account, iptables support, and outbound HTTPS access to GitHub, GHCR, the selected engine endpoint, and any domains listed in the workflow network allowlist.
@@ -69,6 +75,7 @@ Run the deterministic smoke workflow first:
 ```bash
 gh workflow run azure-runner-capability-smoke.yml
 gh workflow run cloudflare-runner-capability-smoke.yml
+gh workflow run macos-local-model-smoke.yml
 ```
 
 Then run an agentic workflow:

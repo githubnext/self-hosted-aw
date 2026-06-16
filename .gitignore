@@ -4,3 +4,4 @@
 .env.*
 !.env.example
 infra/azure-vm/*.local.conf
+infra/macos/*.local.conf
