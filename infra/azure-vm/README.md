@@ -47,7 +47,7 @@ The helper obtains a short-lived GitHub runner registration token with `gh api`,
 After the VM appears in GitHub repository settings, run:
 
 ```bash
-gh workflow run runner-capability-smoke.yml -f target=azure
+gh workflow run azure-runner-capability-smoke.yml
 gh aw run azure-vm-openrouter
 ```
 

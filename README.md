@@ -12,7 +12,8 @@ The repo has three demo lanes:
 
 - `.github/workflows/azure-vm-openrouter.md` - agentic workflow for an Azure-hosted runner.
 - `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow for a Cloudflare-labeled runner lane.
-- `.github/workflows/runner-capability-smoke.yml` - deterministic GitHub Actions smoke test for runner labels and OpenRouter.
+- `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
+- `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
 - `scripts/check-gh-aw-runner.sh` - validates the self-hosted runner requirements needed by `gh-aw`.
 - `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
@@ -66,9 +67,8 @@ The generated `.lock.yml` files are committed because they are the executable Gi
 Run the deterministic smoke workflow first:
 
 ```bash
-gh workflow run runner-capability-smoke.yml -f target=azure
-gh workflow run runner-capability-smoke.yml -f target=cloudflare
-gh workflow run runner-capability-smoke.yml -f target=all
+gh workflow run azure-runner-capability-smoke.yml
+gh workflow run cloudflare-runner-capability-smoke.yml
 ```
 
 Then run an agentic workflow:

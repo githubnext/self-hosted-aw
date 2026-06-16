@@ -21,7 +21,7 @@ For `gh-aw` agent jobs, the runner host must provide:
 Run this before trying the agent workflow:
 
 ```bash
-gh workflow run runner-capability-smoke.yml -f target=cloudflare
+gh workflow run cloudflare-runner-capability-smoke.yml
 ```
 
 Then run:

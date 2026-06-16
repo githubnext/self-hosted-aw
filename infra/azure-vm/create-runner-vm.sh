@@ -66,7 +66,7 @@ if az vm show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_VM_NAME" >
     --show-details \
     --query '{name:name, location:location, size:hardwareProfile.vmSize, powerState:powerState, publicIp:publicIps}' \
     -o table
-  echo "Run: gh workflow run runner-capability-smoke.yml -f target=azure"
+  echo "Run: gh workflow run azure-runner-capability-smoke.yml"
   exit 0
 fi
 
@@ -133,7 +133,7 @@ for location in $locations; do
         echo "Location: $location"
         echo "Size: $size"
         echo "Zone: $zone_label"
-        echo "Run: gh workflow run runner-capability-smoke.yml -f target=azure"
+        echo "Run: gh workflow run azure-runner-capability-smoke.yml"
         exit 0
       fi
 
