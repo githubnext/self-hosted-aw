@@ -79,6 +79,52 @@ gh secret set LOCAL_OPENAI_API_KEY
 
 Ollama ignores the API key value for its OpenAI-compatible endpoint, so no secret is needed for the default setup.
 
+## One-command Qwen Setup
+
+On the Mac that will host Ollama and the macOS self-hosted runner, run:
+
+```bash
+infra/macos/setup-local-qwen-ollama.sh
+```
+
+The setup helper:
+
+- Installs `gh` and `ollama` with Homebrew if they are missing.
+- Starts Ollama.
+- Pulls `qwen3.6:27b`.
+- Smoke-tests Ollama's OpenAI-compatible endpoint.
+- Sets the repository variables used by the local model workflows.
+- Registers the macOS runner with `macos-local,local-model,qwen3-27b`.
+- Installs the GitHub runner as a background service by default.
+
+By default, the runner name is:
+
+```text
+<mac-hostname>-qwen3-27b
+```
+
+Useful overrides:
+
+```bash
+QWEN_OLLAMA_MODEL=qwen3.6:27b infra/macos/setup-local-qwen-ollama.sh
+REGISTER_MACOS_RUNNER=0 infra/macos/setup-local-qwen-ollama.sh
+INSTALL_RUNNER_SERVICE=0 infra/macos/setup-local-qwen-ollama.sh
+SET_GITHUB_VARIABLES=0 infra/macos/setup-local-qwen-ollama.sh
+RUN_SMOKE=0 infra/macos/setup-local-qwen-ollama.sh
+RESTART_OLLAMA=0 infra/macos/setup-local-qwen-ollama.sh
+PULL_MODEL=0 infra/macos/setup-local-qwen-ollama.sh
+INSTALL_HOMEBREW=1 infra/macos/setup-local-qwen-ollama.sh
+INSTALL_TAILSCALE=1 infra/macos/setup-local-qwen-ollama.sh
+```
+
+If a nearby Linux `gh-aw` runner needs to call Ollama over the network, expose Ollama deliberately:
+
+```bash
+EXPOSE_OLLAMA_TO_NETWORK=1 infra/macos/setup-local-qwen-ollama.sh
+```
+
+That binds Ollama to `0.0.0.0:11434` by setting `OLLAMA_HOST` with `launchctl`. Use this only on a trusted network or tailnet.
+
 ## Register A Local Mac
 
 From this repository on the Mac:
