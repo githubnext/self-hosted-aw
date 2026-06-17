@@ -23,8 +23,9 @@ The repo has five demo lanes:
 - `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
 - `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
 - `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
+- `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
-- `infra/macos/` - generic macOS runner registration/removal helpers and local model notes.
+- `infra/macos/` - generic macOS runner registration/removal helpers, Qwen/Ollama setup, and local model notes.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
 ## Prerequisites
@@ -47,6 +48,12 @@ Optionally set a model and attribution metadata for the smoke test:
 gh variable set OPENROUTER_MODEL --body "openai/gpt-4o-mini"
 gh variable set OPENROUTER_SITE_URL --body "https://github.com/OWNER/REPO"
 gh variable set OPENROUTER_APP_NAME --body "gh-aw-self-hosted-demo"
+```
+
+For a Mac-hosted Qwen/Ollama local model runner, use the macOS bootstrap:
+
+```bash
+infra/macos/setup-local-qwen-ollama.sh
 ```
 
 ## Runner Labels
