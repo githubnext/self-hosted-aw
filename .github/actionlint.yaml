@@ -5,6 +5,7 @@ self-hosted-runner:
     - cloudflare
     - gh-aw
     - local-model
+    - local-macrunner-qwenollama
     - macos-local
     - qwen3-27b
 

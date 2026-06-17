@@ -1,17 +1,19 @@
 # gh-aw self-hosted runner and OpenRouter demonstrator
 
-This repository demonstrates GitHub Agentic Workflows running on self-hosted GitHub Actions runners and using an OpenAI-compatible inference provider through OpenRouter.
+This repository demonstrates GitHub Agentic Workflows running on self-hosted GitHub Actions runners and using OpenAI-compatible inference providers through OpenRouter or local Ollama.
 
-The repo has four demo lanes:
+The repo has five demo lanes:
 
 - Azure VM runner: a `gh-aw` workflow routed to `[self-hosted, linux, x64, azure]`.
 - Cloudflare runner lane: a `gh-aw` workflow routed to `[self-hosted, linux, x64, cloudflare]`, with an explicit capability check for Docker, sudo, iptables, and egress.
 - OpenRouter inference: Codex is configured with `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and `OPENAI_API_KEY=${{ secrets.OPENROUTER_API_KEY }}`.
+- Local Mac Qwen/Ollama inference: a `gh-aw` workflow routed to `[self-hosted, linux, x64, local-macrunner-qwenollama]` and pointed at a Mac-hosted Ollama endpoint.
 - macOS local model runner: a regular GitHub Actions workflow routed to `[self-hosted, macOS, macos-local, local-model]` and pointed at a local OpenAI-compatible endpoint such as Ollama.
 
 ## Repository Map
 
 - `.github/workflows/azure-vm-openrouter.md` - agentic workflow for an Azure-hosted runner.
+- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow for a Linux runner wired to a Mac-hosted Qwen/Ollama endpoint.
 - `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow for a Cloudflare-labeled runner lane.
 - `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
 - `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
@@ -53,6 +55,7 @@ Register self-hosted runners with these labels:
 
 ```text
 self-hosted,linux,x64,azure,gh-aw
+self-hosted,linux,x64,local-macrunner-qwenollama,gh-aw
 self-hosted,linux,x64,cloudflare,gh-aw
 self-hosted,macOS,macos-local,local-model
 self-hosted,macOS,macos-local,local-model,qwen3-27b
@@ -85,6 +88,7 @@ Then run an agentic workflow:
 
 ```bash
 gh aw run azure-vm-openrouter
+gh aw run local-macrunner-qwenollama
 gh aw run cloudflare-runner-openrouter
 ```
 
