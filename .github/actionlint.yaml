@@ -6,6 +6,7 @@ self-hosted-runner:
     - gh-aw
     - local-model
     - macos-local
+    - qwen3-27b
 
 # Configuration variables in array of strings defined in your repository or
 # organization. `null` means disabling configuration variables check.

@@ -16,6 +16,7 @@ The repo has four demo lanes:
 - `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
 - `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
 - `.github/workflows/macos-local-model-smoke.yml` - deterministic smoke test for a macOS local-model runner.
+- `.github/workflows/macos-qwen-local-model-smoke.yml` - deterministic smoke test pinned to a Qwen-capable macOS runner.
 - `scripts/check-gh-aw-runner.sh` - validates the self-hosted runner requirements needed by `gh-aw`.
 - `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
 - `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
@@ -54,6 +55,7 @@ Register self-hosted runners with these labels:
 self-hosted,linux,x64,azure,gh-aw
 self-hosted,linux,x64,cloudflare,gh-aw
 self-hosted,macOS,macos-local,local-model
+self-hosted,macOS,macos-local,local-model,qwen3-27b
 ```
 
 `gh-aw` self-hosted runners must be Linux hosts with Docker, passwordless sudo for the runner service account, iptables support, and outbound HTTPS access to GitHub, GHCR, the selected engine endpoint, and any domains listed in the workflow network allowlist.
@@ -76,6 +78,7 @@ Run the deterministic smoke workflow first:
 gh workflow run azure-runner-capability-smoke.yml
 gh workflow run cloudflare-runner-capability-smoke.yml
 gh workflow run macos-local-model-smoke.yml
+gh workflow run macos-qwen-local-model-smoke.yml
 ```
 
 Then run an agentic workflow:

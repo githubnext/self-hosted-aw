@@ -20,6 +20,14 @@ macos-local,local-model
 
 Any Mac with those labels can run `.github/workflows/macos-local-model-smoke.yml`.
 
+For a Mac that hosts a specific larger Qwen model, add a model label too:
+
+```text
+qwen3-27b
+```
+
+That label lets `.github/workflows/macos-qwen-local-model-smoke.yml` route only to a machine that has the expected Qwen model installed.
+
 ## Recommended Security Shape
 
 Use a private repository and a dedicated macOS user account for the runner. A self-hosted runner can execute workflow code on the machine, so do not attach a personal daily-driver account to untrusted workflows.
@@ -99,6 +107,20 @@ MACOS_RUNNER_CONFIG=infra/macos/runner.local.conf infra/macos/register-runner.sh
 
 `infra/macos/*.local.conf` is ignored by git.
 
+Example config for a Qwen-capable Mac:
+
+```bash
+cat > infra/macos/runner.local.conf <<'EOF'
+: "${RUNNER_VERSION:=2.329.0}"
+: "${RUNNER_NAME:=qwen3-27b-macos-01}"
+: "${RUNNER_LABELS:=macos-local,local-model,qwen3-27b}"
+: "${RUNNER_DIR:=${HOME}/actions-runner-${RUNNER_NAME}}"
+: "${INSTALL_RUNNER_SERVICE:=1}"
+EOF
+
+MACOS_RUNNER_CONFIG=infra/macos/runner.local.conf infra/macos/register-runner.sh
+```
+
 ## Register A Remote Mac Over Tailscale
 
 On the remote Mac:
@@ -132,6 +154,7 @@ If the remote Mac should access other tailnet-only services during a job, make s
 
 ```bash
 gh workflow run macos-local-model-smoke.yml
+gh workflow run macos-qwen-local-model-smoke.yml
 ```
 
 The smoke test checks:
