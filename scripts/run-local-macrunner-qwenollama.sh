@@ -150,6 +150,7 @@ wait_for_runner() {
 setup_local_mac_endpoint() {
   say "Setting up the Mac-hosted Qwen/Ollama endpoint."
   LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
+    LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
     EXPOSE_OLLAMA_TO_NETWORK="${EXPOSE_OLLAMA_TO_NETWORK:-1}" \
     REGISTER_MACOS_RUNNER=0 \
     SET_GITHUB_VARIABLES=0 \
@@ -233,6 +234,7 @@ setup_local_lima_runner() {
     GITHUB_TOKEN="$token" \
     OLLAMA_UPSTREAM_BASE_URL="$upstream_base_url" \
     LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
+    LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
     bash -lc "cd ${guest_repo_quoted} && infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
 }
 
@@ -308,6 +310,7 @@ latest_run_line() {
 : "${DRY_RUN:=0}"
 : "${ENABLE_IF_NEEDED:=1}"
 : "${LOCAL_AGENT_MODEL:=qwen2.5:0.5b}"
+: "${LOCAL_AGENT_MODEL_ALIAS:=qwen2.5-0.5b}"
 : "${LIMA_INSTANCE:=gh-aw-local-qwen}"
 : "${LIMA_TEMPLATE:=template:ubuntu-lts}"
 : "${LIMA_ARCH:=x86_64}"
@@ -331,7 +334,8 @@ say "repo: ${repo}"
 say "workflow: ${WORKFLOW_ID}"
 say "ref: ${REF}"
 say "runner labels: ${RUNNER_LABELS}"
-say "local model: ${LOCAL_AGENT_MODEL}"
+say "Ollama source model: ${LOCAL_AGENT_MODEL}"
+say "workflow model alias: ${LOCAL_AGENT_MODEL_ALIAS}"
 say "prompt: ${PROMPT}"
 say
 

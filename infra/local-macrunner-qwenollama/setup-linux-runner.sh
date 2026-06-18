@@ -63,12 +63,23 @@ fi
 
 normalize_qwen_model() {
   local normalized
+  local normalized_alias
 
   normalized="$(printf '%s' "$LOCAL_AGENT_MODEL" | tr '[:upper:]' '[:lower:]')"
   case "$normalized" in
     qwen*) ;;
     *) die "LOCAL_AGENT_MODEL must be a Qwen model ID. Got: ${LOCAL_AGENT_MODEL}" ;;
   esac
+
+  normalized_alias="$(printf '%s' "$LOCAL_AGENT_MODEL_ALIAS" | tr '[:upper:]' '[:lower:]')"
+  case "$normalized_alias" in
+    qwen*) ;;
+    *) die "LOCAL_AGENT_MODEL_ALIAS must be a Qwen model ID. Got: ${LOCAL_AGENT_MODEL_ALIAS}" ;;
+  esac
+
+  if [[ ! "$LOCAL_AGENT_MODEL_ALIAS" =~ ^[A-Za-z][A-Za-z0-9._-]*$ ]]; then
+    die "LOCAL_AGENT_MODEL_ALIAS must be AWF-safe: letters, digits, dot, underscore, and hyphen only. Got: ${LOCAL_AGENT_MODEL_ALIAS}"
+  fi
 }
 
 install_packages() {
@@ -145,7 +156,7 @@ configure_repo_variables() {
   fi
 
   gh variable set LOCAL_AGENT_OPENAI_BASE_URL --repo "$repo" --body "$(agent_base_url)"
-  gh variable set LOCAL_AGENT_OPENAI_MODEL --repo "$repo" --body "$LOCAL_AGENT_MODEL"
+  gh variable set LOCAL_AGENT_OPENAI_MODEL --repo "$repo" --body "$LOCAL_AGENT_MODEL_ALIAS"
 }
 
 ensure_runner_user() {
@@ -413,5 +424,6 @@ register_runner
 say
 say "Linux local Mac Qwen/Ollama runner setup complete."
 say "Runner labels: self-hosted,linux,x64,${RUNNER_LABELS}"
-say "Agent workflow model: ${LOCAL_AGENT_MODEL}"
+say "Ollama source model: ${LOCAL_AGENT_MODEL}"
+say "Agent workflow model alias: ${LOCAL_AGENT_MODEL_ALIAS}"
 say "Agent workflow endpoint from gh-aw: $(agent_base_url)"

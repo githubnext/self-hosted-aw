@@ -62,13 +62,14 @@ Install Ollama, start it, and pull a model:
 
 ```bash
 ollama pull qwen2.5:0.5b
+ollama cp qwen2.5:0.5b qwen2.5-0.5b
 ```
 
 Set repository variables for another OpenAI-compatible local server:
 
 ```bash
 gh variable set LOCAL_OPENAI_BASE_URL --body "http://127.0.0.1:11434/v1"
-gh variable set LOCAL_OPENAI_MODEL --body "qwen2.5:0.5b"
+gh variable set LOCAL_OPENAI_MODEL --body "qwen2.5-0.5b"
 ```
 
 If the local server requires an API key, set:
@@ -92,6 +93,7 @@ The setup helper:
 - Installs `gh` and `ollama` with Homebrew if they are missing.
 - Starts Ollama.
 - Pulls `qwen3.6:27b`.
+- Creates an AWF-safe local model alias for the pulled Qwen model.
 - Smoke-tests Ollama's OpenAI-compatible endpoint.
 - Sets the repository variables used by the local model workflows.
 - Registers the macOS runner with `macos-local,local-model,qwen3-27b`.
@@ -107,6 +109,7 @@ Useful overrides:
 
 ```bash
 QWEN_OLLAMA_MODEL=qwen3.6:27b infra/macos/setup-local-qwen-ollama.sh
+QWEN_OLLAMA_MODEL_ALIAS=qwen3.6-27b infra/macos/setup-local-qwen-ollama.sh
 REGISTER_MACOS_RUNNER=0 infra/macos/setup-local-qwen-ollama.sh
 INSTALL_RUNNER_SERVICE=0 infra/macos/setup-local-qwen-ollama.sh
 SET_GITHUB_VARIABLES=0 infra/macos/setup-local-qwen-ollama.sh
