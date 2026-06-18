@@ -113,9 +113,18 @@ SET_GITHUB_VARIABLES=0 infra/macos/setup-local-qwen-ollama.sh
 RUN_SMOKE=0 infra/macos/setup-local-qwen-ollama.sh
 RESTART_OLLAMA=0 infra/macos/setup-local-qwen-ollama.sh
 PULL_MODEL=0 infra/macos/setup-local-qwen-ollama.sh
+CACHE_OLLAMA_MANIFEST=0 infra/macos/setup-local-qwen-ollama.sh
 INSTALL_HOMEBREW=1 infra/macos/setup-local-qwen-ollama.sh
 INSTALL_TAILSCALE=1 infra/macos/setup-local-qwen-ollama.sh
 ```
+
+The helper caches the Ollama model manifest by default under:
+
+```text
+${XDG_CACHE_HOME:-$HOME/.cache}/gh-aw/ollama-manifests
+```
+
+That cache is intentionally metadata-only. The large model blobs stay in Ollama's own model directory, usually `$HOME/.ollama/models/blobs`. A restored manifest can help Ollama recognize existing blobs, but the helper still verifies the model with `ollama show` before skipping a pull.
 
 If a nearby Linux `gh-aw` runner needs to call Ollama over the network, expose Ollama deliberately:
 
