@@ -56,8 +56,27 @@ RUNNER_NAME=my-local-agent-runner infra/local-macrunner-qwenollama/setup-linux-r
 RUNNER_DIR=/opt/actions-runner-local-agent infra/local-macrunner-qwenollama/setup-linux-runner.sh
 ```
 
-After setup:
+To set up or start the Linux runner and dispatch the workflow in one command from the Linux host:
 
 ```bash
-gh aw run local-macrunner-qwenollama
+GITHUB_REPOSITORY=githubnext/self-hosted-aw \
+OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 \
+scripts/run-local-macrunner-qwenollama.sh
+```
+
+After the runner is already set up, the same command can be run from any machine with `gh` access:
+
+```bash
+scripts/run-local-macrunner-qwenollama.sh
+```
+
+When run on Linux, the script starts or registers the runner before dispatching the workflow. When run on macOS or another machine, it verifies that a matching Linux runner is already online before dispatching.
+
+Useful run overrides:
+
+```bash
+scripts/run-local-macrunner-qwenollama.sh "Check the local agent lane."
+REF=main WATCH=0 scripts/run-local-macrunner-qwenollama.sh
+SETUP_RUNNER=0 WAIT_FOR_RUNNER=0 scripts/run-local-macrunner-qwenollama.sh
+DRY_RUN=1 scripts/run-local-macrunner-qwenollama.sh
 ```
