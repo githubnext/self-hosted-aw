@@ -38,10 +38,6 @@ const disableAiCreditsGuardRaw = process.env.LOCAL_QWEN_AWF_DISABLE_AI_CREDITS_G
 const directBaseUrl = process.env.LOCAL_QWEN_OPENAI_BASE_URL || "http://host.docker.internal:11435/v1";
 const hostPorts = process.env.LOCAL_QWEN_AWF_HOST_PORTS || "80,443,8080,11435";
 
-function tomlString(value) {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
 function shellQuote(value) {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
@@ -110,13 +106,10 @@ patched = patched.replace(
   /(^[ \t]*model_provider = )"openai-proxy"(\n\n[ \t]*)\[model_providers\.openai-proxy\]\n([ \t]*)name = "OpenAI AWF proxy"\n\3base_url = "http:\/\/172\.30\.0\.30:10000"/m,
   (_match, providerPrefix, providerIndent, propertyIndent) => {
     codexProviderCount += 1;
-    return `${providerPrefix}"local-qwen-ollama"${providerIndent}[model_providers.local-qwen-ollama]\n${propertyIndent}name = "Local Qwen/Ollama"\n${propertyIndent}base_url = "${tomlString(directBaseUrl)}"`;
+    const tomlBaseUrl = directBaseUrl.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return `${providerPrefix}"local-qwen-ollama"${providerIndent}[model_providers.local-qwen-ollama]\n${propertyIndent}name = "Local Qwen/Ollama"\n${propertyIndent}base_url = "${tomlBaseUrl}"`;
   }
 );
-
-if (codexProviderCount !== 1 && !patched.includes('model_provider = "local-qwen-ollama"')) {
-  throw new Error(`expected to patch the generated Codex provider block in ${lockFile}`);
-}
 
 const awkReplacements = [
   ["BEGIN { skip_openai_proxy = 0 }", "BEGIN { skip_local_qwen_ollama = 0 }"],
@@ -128,11 +121,13 @@ const awkReplacements = [
   ["!skip_openai_proxy { print }", "!skip_local_qwen_ollama { print }"],
 ];
 
-for (const [from, to] of awkReplacements) {
-  if (patched.includes(from)) {
-    patched = patched.replace(from, to);
-  } else if (!patched.includes(to)) {
-    throw new Error(`expected to patch generated Codex config awk rule: ${from}`);
+if (codexProviderCount > 0 || patched.includes('model_provider = "local-qwen-ollama"')) {
+  for (const [from, to] of awkReplacements) {
+    if (patched.includes(from)) {
+      patched = patched.replace(from, to);
+    } else if (!patched.includes(to)) {
+      throw new Error(`expected to patch generated Codex config awk rule: ${from}`);
+    }
   }
 }
 
@@ -162,6 +157,15 @@ if (!patched.includes("--env OPENAI_API_KEY=ollama")) {
     ` --env OPENAI_API_KEY=ollama --env OPENAI_BASE_URL=${shellQuote(directBaseUrl)} --env-all `
   );
 }
+
+patched = patched.replace(
+  /OPENAI_API_KEY: \$\{\{ secrets\.(?:CODEX_API_KEY \|\| secrets\.)?OPENAI_API_KEY \}\}/g,
+  "OPENAI_API_KEY: ollama"
+);
+patched = patched.replace(
+  /OPENAI_BASE_URL: http:\/\/host\.docker\.internal:10001/g,
+  `OPENAI_BASE_URL: ${directBaseUrl}`
+);
 
 if (patched !== original) {
   fs.writeFileSync(lockFile, patched);

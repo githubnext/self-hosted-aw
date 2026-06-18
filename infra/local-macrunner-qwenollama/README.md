@@ -11,10 +11,10 @@ The local agent lane defaults to:
 ```text
 Ollama source model: qwen2.5:0.5b
 Workflow model alias: qwen2.5-0.5b
-Codex provider model alias: openai/qwen2.5-0.5b
+OpenCode model: openai/qwen2.5-0.5b
 ```
 
-That is intentionally tiny for smoke-testing the plumbing. It is not expected to be a strong coding agent; it is the lightest Qwen model this demo uses to prove the end-to-end local path. The workflow alias exists because AWF model identifiers cannot contain the `:` tag character used by Ollama. The provider-qualified alias matches the Codex model ID used by the compiled workflow.
+That is intentionally tiny for smoke-testing the plumbing. It is not expected to be a strong coding agent; it is the lightest Qwen model this demo uses to prove the end-to-end local path. The workflow alias exists because AWF model identifiers cannot contain the `:` tag character used by Ollama. The OpenCode model uses OpenCode's `provider/model` syntax while still sending `qwen2.5-0.5b` to Ollama.
 
 The agent container calls the local model directly at:
 
@@ -49,7 +49,7 @@ WATCH=0 scripts/run-local-macrunner-qwenollama.sh
 DRY_RUN=1 scripts/run-local-macrunner-qwenollama.sh
 LOCAL_AGENT_MODEL=qwen2.5:0.5b scripts/run-local-macrunner-qwenollama.sh
 LOCAL_AGENT_MODEL_ALIAS=qwen2.5-0.5b scripts/run-local-macrunner-qwenollama.sh
-LOCAL_AGENT_PROVIDER_MODEL_ALIAS=openai/qwen2.5-0.5b scripts/run-local-macrunner-qwenollama.sh
+LOCAL_AGENT_OPENCODE_MODEL=openai/qwen2.5-0.5b scripts/run-local-macrunner-qwenollama.sh
 LIMA_INSTANCE=my-gh-aw-runner scripts/run-local-macrunner-qwenollama.sh
 ```
 
@@ -77,7 +77,7 @@ infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
 The helper:
 
 - Installs Docker, `socat`, `iptables`, `sudo`, `git`, and other runner prerequisites on apt-based Linux.
-- Uses `qwen2.5:0.5b` as the Ollama source model, `qwen2.5-0.5b` as the workflow model alias, and `openai/qwen2.5-0.5b` as the Codex provider model alias by default.
+- Uses `qwen2.5:0.5b` as the Ollama source model, `qwen2.5-0.5b` as the workflow model alias, and `openai/qwen2.5-0.5b` as the OpenCode model by default.
 - Creates an `actions` user with passwordless sudo.
 - Sets repository variables for the local agent endpoint and tiny Qwen model.
 - Registers a GitHub Actions runner with `local-macrunner-qwenollama,gh-aw`.
@@ -89,7 +89,7 @@ Useful overrides:
 ```bash
 LOCAL_AGENT_MODEL=qwen2.5:0.5b infra/local-macrunner-qwenollama/setup-linux-runner.sh
 LOCAL_AGENT_MODEL_ALIAS=qwen2.5-0.5b infra/local-macrunner-qwenollama/setup-linux-runner.sh
-LOCAL_AGENT_PROVIDER_MODEL_ALIAS=openai/qwen2.5-0.5b infra/local-macrunner-qwenollama/setup-linux-runner.sh
+LOCAL_AGENT_OPENCODE_MODEL=openai/qwen2.5-0.5b infra/local-macrunner-qwenollama/setup-linux-runner.sh
 SET_GITHUB_VARIABLES=0 infra/local-macrunner-qwenollama/setup-linux-runner.sh
 INSTALL_PACKAGES=0 infra/local-macrunner-qwenollama/setup-linux-runner.sh
 INSTALL_RUNNER_SERVICE=0 infra/local-macrunner-qwenollama/setup-linux-runner.sh

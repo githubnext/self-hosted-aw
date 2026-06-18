@@ -102,7 +102,7 @@ gh aw compile --validate --actionlint
 scripts/patch-local-qwen-awf-pricing.sh
 ```
 
-The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs runtime config for unknown local model aliases. The patch also disables the AWF API proxy for the local lane, routes Codex directly to `http://host.docker.internal:11435/v1`, and allows that host port because AWF v0.27.0 drops the custom OpenAI target port when proxying through its API sidecar.
+The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs runtime config for unknown local model aliases. The patch also disables the AWF API proxy for the local lane, routes OpenCode directly to `http://host.docker.internal:11435/v1`, and allows that host port because AWF v0.27.0 drops the custom OpenAI target port when proxying through its API sidecar.
 
 ## Run The Demos
 

@@ -151,7 +151,7 @@ setup_local_mac_endpoint() {
   say "Setting up the Mac-hosted Qwen/Ollama endpoint."
   LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
     LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
-    LOCAL_AGENT_PROVIDER_MODEL_ALIAS="$LOCAL_AGENT_PROVIDER_MODEL_ALIAS" \
+    LOCAL_AGENT_OPENCODE_MODEL="$LOCAL_AGENT_OPENCODE_MODEL" \
     EXPOSE_OLLAMA_TO_NETWORK="${EXPOSE_OLLAMA_TO_NETWORK:-1}" \
     REGISTER_MACOS_RUNNER=0 \
     SET_GITHUB_VARIABLES=0 \
@@ -236,7 +236,7 @@ setup_local_lima_runner() {
     OLLAMA_UPSTREAM_BASE_URL="$upstream_base_url" \
     LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
     LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
-    LOCAL_AGENT_PROVIDER_MODEL_ALIAS="$LOCAL_AGENT_PROVIDER_MODEL_ALIAS" \
+    LOCAL_AGENT_OPENCODE_MODEL="$LOCAL_AGENT_OPENCODE_MODEL" \
     bash -lc "cd ${guest_repo_quoted} && infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
 }
 
@@ -313,7 +313,7 @@ latest_run_line() {
 : "${ENABLE_IF_NEEDED:=1}"
 : "${LOCAL_AGENT_MODEL:=qwen2.5:0.5b}"
 : "${LOCAL_AGENT_MODEL_ALIAS:=qwen2.5-0.5b}"
-: "${LOCAL_AGENT_PROVIDER_MODEL_ALIAS:=openai/${LOCAL_AGENT_MODEL_ALIAS}}"
+: "${LOCAL_AGENT_OPENCODE_MODEL:=openai/${LOCAL_AGENT_MODEL_ALIAS}}"
 : "${LIMA_INSTANCE:=gh-aw-local-qwen}"
 : "${LIMA_TEMPLATE:=template:ubuntu-lts}"
 : "${LIMA_ARCH:=x86_64}"
@@ -339,7 +339,7 @@ say "ref: ${REF}"
 say "runner labels: ${RUNNER_LABELS}"
 say "Ollama source model: ${LOCAL_AGENT_MODEL}"
 say "workflow model alias: ${LOCAL_AGENT_MODEL_ALIAS}"
-say "Codex provider model alias: ${LOCAL_AGENT_PROVIDER_MODEL_ALIAS}"
+say "OpenCode model: ${LOCAL_AGENT_OPENCODE_MODEL}"
 say "prompt: ${PROMPT}"
 say
 
