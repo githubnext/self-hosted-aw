@@ -81,8 +81,8 @@ The helper:
 - Creates an `actions` user with passwordless sudo.
 - Sets repository variables for the local agent endpoint and tiny Qwen model.
 - Registers a GitHub Actions runner with `local-macrunner-qwenollama,gh-aw`.
-- Starts a local proxy from `127.0.0.1:11435` to the Mac-hosted Ollama endpoint.
-- Adds `host.docker.internal` on the Linux host so the workflow pre-step and `gh-aw` container both use `http://host.docker.internal:11435/v1`.
+- Starts a local proxy from `0.0.0.0:11435` to the Mac-hosted Ollama endpoint.
+- Adds `host.docker.internal` on the Linux host so the workflow pre-step uses `http://host.docker.internal:11435/v1`; the `gh-aw` container reaches the same listener through Docker's host-gateway address.
 
 Useful overrides:
 
