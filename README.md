@@ -98,9 +98,10 @@ Compile the Markdown workflows into generated GitHub Actions lock files:
 
 ```bash
 gh aw compile --validate --actionlint
+scripts/patch-local-qwen-awf-pricing.sh
 ```
 
-The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows.
+The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs `apiProxy.defaultAiCreditsPricing` in its runtime config for unknown local model aliases.
 
 ## Run The Demos
 
