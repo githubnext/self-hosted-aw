@@ -125,6 +125,82 @@ ollama_port_from_bind() {
   fi
 }
 
+ollama_models_dir() {
+  printf '%s\n' "${OLLAMA_MODELS:-${HOME}/.ollama/models}"
+}
+
+ollama_manifest_path() {
+  local model_ref="$1"
+  local ref_without_tag
+  local tag
+  local first_component
+  local manifest_root
+
+  if [[ "${model_ref##*/}" == *":"* ]]; then
+    ref_without_tag="${model_ref%:*}"
+    tag="${model_ref##*:}"
+  else
+    ref_without_tag="$model_ref"
+    tag="latest"
+  fi
+
+  first_component="${ref_without_tag%%/*}"
+  manifest_root="$(ollama_models_dir)/manifests"
+
+  if [[ "$ref_without_tag" != */* ]]; then
+    printf '%s/registry.ollama.ai/library/%s/%s\n' "$manifest_root" "$ref_without_tag" "$tag"
+  elif [[ "$first_component" == *.* || "$first_component" == *:* || "$first_component" == "localhost" ]]; then
+    printf '%s/%s/%s\n' "$manifest_root" "$ref_without_tag" "$tag"
+  else
+    printf '%s/registry.ollama.ai/%s/%s\n' "$manifest_root" "$ref_without_tag" "$tag"
+  fi
+}
+
+cache_manifest_path() {
+  local manifest_path="$1"
+  local models_dir
+  local relative_path
+
+  models_dir="$(ollama_models_dir)"
+  relative_path="${manifest_path#"${models_dir}/manifests/"}"
+  printf '%s/manifests/%s\n' "$OLLAMA_MANIFEST_CACHE_DIR" "$relative_path"
+}
+
+restore_ollama_manifest_cache() {
+  local manifest_path="$1"
+  local cached_path
+
+  if [[ "$CACHE_OLLAMA_MANIFEST" != "1" ]]; then
+    return 0
+  fi
+
+  cached_path="$(cache_manifest_path "$manifest_path")"
+
+  if [[ -s "$manifest_path" ]]; then
+    say "ok: Ollama manifest already exists: ${manifest_path}"
+  elif [[ -s "$cached_path" ]]; then
+    mkdir -p "$(dirname "$manifest_path")"
+    cp "$cached_path" "$manifest_path"
+    say "Restored cached Ollama manifest: ${cached_path}"
+  else
+    say "No cached Ollama manifest found yet: ${cached_path}"
+  fi
+}
+
+save_ollama_manifest_cache() {
+  local manifest_path="$1"
+  local cached_path
+
+  if [[ "$CACHE_OLLAMA_MANIFEST" != "1" || ! -s "$manifest_path" ]]; then
+    return 0
+  fi
+
+  cached_path="$(cache_manifest_path "$manifest_path")"
+  mkdir -p "$(dirname "$cached_path")"
+  cp "$manifest_path" "$cached_path"
+  say "Cached Ollama manifest: ${cached_path}"
+}
+
 ollama_ready() {
   curl -fsS --connect-timeout 2 --max-time 5 "${OLLAMA_HEALTH_URL}/api/version" >/dev/null 2>&1
 }
@@ -188,7 +264,7 @@ start_ollama() {
 }
 
 model_installed() {
-  ollama list | awk 'NR > 1 {print $1}' | grep -Fx -- "$QWEN_OLLAMA_MODEL" >/dev/null 2>&1
+  ollama show "$QWEN_OLLAMA_MODEL" >/dev/null 2>&1
 }
 
 configure_ollama_host() {
@@ -250,6 +326,7 @@ fi
 : "${INSTALL_RUNNER_SERVICE:=1}"
 : "${RESTART_OLLAMA:=1}"
 : "${PULL_MODEL:=1}"
+: "${CACHE_OLLAMA_MANIFEST:=1}"
 : "${RUN_SMOKE:=1}"
 : "${LOCAL_OPENAI_API_KEY:=ollama}"
 
@@ -264,16 +341,20 @@ fi
 ollama_port="$(ollama_port_from_bind "$OLLAMA_HOST_BIND")"
 : "${OLLAMA_HEALTH_URL:=http://127.0.0.1:${ollama_port}}"
 : "${LOCAL_OPENAI_BASE_URL:=http://127.0.0.1:${ollama_port}/v1}"
+: "${OLLAMA_MANIFEST_CACHE_DIR:=${XDG_CACHE_HOME:-${HOME}/.cache}/gh-aw/ollama-manifests}"
 : "${RUNNER_LABELS:=macos-local,local-model,${QWEN_RUNNER_LABEL}}"
 
 if [[ -z "${RUNNER_NAME:-}" ]]; then
   RUNNER_NAME="$(default_host_name)-${QWEN_RUNNER_LABEL}"
 fi
 
+qwen_manifest_path="$(ollama_manifest_path "$QWEN_OLLAMA_MODEL")"
+
 say "== macOS Qwen/Ollama setup =="
 say "model: ${QWEN_OLLAMA_MODEL}"
 say "local OpenAI-compatible URL: ${LOCAL_OPENAI_BASE_URL}"
 say "Ollama bind: ${OLLAMA_HOST_BIND}"
+say "Ollama manifest: ${qwen_manifest_path}"
 say "register runner: ${REGISTER_MACOS_RUNNER}"
 say "runner name: ${RUNNER_NAME}"
 say
@@ -292,14 +373,18 @@ fi
 
 configure_ollama_host
 start_ollama
+restore_ollama_manifest_cache "$qwen_manifest_path"
 
 if model_installed; then
   say "ok: Qwen model is already installed: ${QWEN_OLLAMA_MODEL}"
+  save_ollama_manifest_cache "$qwen_manifest_path"
 elif [[ "$PULL_MODEL" == "1" ]]; then
   say "Pulling Qwen model: ${QWEN_OLLAMA_MODEL}"
   run ollama pull "$QWEN_OLLAMA_MODEL"
+  save_ollama_manifest_cache "$qwen_manifest_path"
 else
   warn "Qwen model is not installed and PULL_MODEL=0, so the model pull was skipped: ${QWEN_OLLAMA_MODEL}"
+  save_ollama_manifest_cache "$qwen_manifest_path"
 fi
 
 if [[ "$RUN_SMOKE" == "1" ]]; then
