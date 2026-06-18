@@ -21,8 +21,8 @@ timeout-minutes: 30
 engine:
   id: copilot
   env:
-    COPILOT_PROVIDER_BASE_URL: "http://host.docker.internal:11434/v1"
-    COPILOT_MODEL: "qwen3.6:27b"
+    COPILOT_PROVIDER_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:8080/v1' }}"
+    COPILOT_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5:0.5b' }}"
     COPILOT_PROVIDER_TYPE: "openai"
     COPILOT_PROVIDER_WIRE_API: "completions"
     COPILOT_PROVIDER_MAX_PROMPT_TOKENS: "12000"
@@ -49,8 +49,8 @@ steps:
     run: bash scripts/check-gh-aw-runner.sh
   - name: Smoke test local Qwen/Ollama endpoint
     env:
-      LOCAL_OPENAI_BASE_URL: "http://host.docker.internal:11434/v1"
-      LOCAL_OPENAI_MODEL: "qwen3.6:27b"
+      LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:8080/v1' }}"
+      LOCAL_OPENAI_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5:0.5b' }}"
       LOCAL_OPENAI_API_KEY: "ollama"
     run: bash scripts/smoke-local-openai-compatible.sh
 
@@ -66,14 +66,14 @@ Important runtime shape:
 
 1. The `gh-aw` agent job itself must run on Linux with Docker, sudo, and iptables.
 2. The local Qwen model is served by Ollama from the nearby Mac.
-3. The model endpoint should be reachable at `http://host.docker.internal:11434/v1` from the agent runner environment.
+3. The model endpoint should be reachable at `http://host.docker.internal:8080/v1` from the agent runner environment.
 
 Do the following:
 
 1. Inspect the current workspace and runner context.
 2. Read the output or rerun `bash scripts/check-gh-aw-runner.sh` if needed.
-3. Confirm the engine configuration is using Copilot BYOK mode with `COPILOT_PROVIDER_BASE_URL=http://host.docker.internal:11434/v1`.
-4. Confirm the requested model is `qwen3.6:27b`.
+3. Confirm the engine configuration is using Copilot BYOK mode with `COPILOT_PROVIDER_BASE_URL` pointing at the local runner proxy.
+4. Confirm the requested model is the configured tiny Qwen model, defaulting to `qwen2.5:0.5b`.
 5. Summarize whether the local Mac Qwen/Ollama lane is suitable for `gh-aw` agent workloads.
 6. Do not modify repository files.
 

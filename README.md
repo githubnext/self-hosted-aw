@@ -25,6 +25,7 @@ The repo has five demo lanes:
 - `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
 - `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
+- `infra/local-macrunner-qwenollama/` - Linux runner bootstrap for the local Mac Qwen/Ollama agentic lane.
 - `infra/macos/` - generic macOS runner registration/removal helpers, Qwen/Ollama setup, and local model notes.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
@@ -50,10 +51,22 @@ gh variable set OPENROUTER_SITE_URL --body "https://github.com/OWNER/REPO"
 gh variable set OPENROUTER_APP_NAME --body "gh-aw-self-hosted-demo"
 ```
 
-For a Mac-hosted Qwen/Ollama local model runner, use the macOS bootstrap:
+For the smallest local Qwen/Ollama agent model endpoint on a Mac, use:
 
 ```bash
-infra/macos/setup-local-qwen-ollama.sh
+infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
+```
+
+If a nearby Linux `gh-aw` runner must reach that Mac over the network, expose the endpoint deliberately:
+
+```bash
+EXPOSE_OLLAMA_TO_NETWORK=1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
+```
+
+For the matching Linux `gh-aw` runner, run the same helper inside the Linux VM or host:
+
+```bash
+OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
 ```
 
 ## Runner Labels

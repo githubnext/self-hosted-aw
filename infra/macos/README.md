@@ -4,7 +4,7 @@ This lane registers any macOS machine as a self-hosted GitHub Actions runner and
 
 This is not a `gh-aw` runner lane. The `gh-aw` lanes still require Linux, Docker, sudo, and iptables. This macOS lane is for regular GitHub Actions jobs that run on a Mac and call a local model endpoint.
 
-For a true Agentic Workflow backed by the Mac's Ollama model, use `.github/workflows/local-macrunner-qwenollama.md`. That workflow still needs a Linux `gh-aw` runner, but the model provider is the Mac-hosted Ollama endpoint.
+For a true Agentic Workflow backed by the Mac's Ollama model, use `.github/workflows/local-macrunner-qwenollama.md`. That workflow still needs a Linux `gh-aw` runner, but the model provider is the Mac-hosted Ollama endpoint. The smallest end-to-end helper for that lane is `infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh`.
 
 ## Routing Contract
 
