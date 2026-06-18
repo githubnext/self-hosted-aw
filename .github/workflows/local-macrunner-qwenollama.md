@@ -34,6 +34,11 @@ models:
             input: "1e-09"
             output: "1e-09"
             cache_read: "1e-09"
+        openai/qwen2.5-0.5b:
+          cost:
+            input: "1e-09"
+            output: "1e-09"
+            cache_read: "1e-09"
 
 network:
   allowed:
