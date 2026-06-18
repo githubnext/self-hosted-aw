@@ -23,7 +23,7 @@ engine:
   model: openai/qwen2.5-0.5b
   env:
     OPENAI_BASE_URL: "http://host.docker.internal:11435/v1"
-    OPENAI_API_KEY: "${{ secrets.LOCAL_AGENT_OPENAI_API_KEY || 'ollama' }}"
+    OPENAI_API_KEY: "ollama"
 
 models:
   providers:
@@ -62,7 +62,7 @@ steps:
   - name: Smoke test local Qwen/Ollama endpoint
     env:
       LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
-      LOCAL_OPENAI_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5-0.5b' }}"
+      LOCAL_OPENAI_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'openai/qwen2.5-0.5b' }}"
       LOCAL_OPENAI_API_KEY: "ollama"
     run: bash scripts/smoke-local-openai-compatible.sh
 
@@ -79,7 +79,7 @@ Important runtime shape:
 1. The `gh-aw` agent job itself runs in a local x86_64 Linux VM with Docker, sudo, and iptables.
 2. The local Qwen model is served by Ollama on the Mac host.
 3. The model endpoint is proxied through the VM and should be reachable at `http://host.docker.internal:11435/v1` from the agent runner environment.
-4. The workflow-safe model alias is `qwen2.5-0.5b`, backed by the Ollama source model `qwen2.5:0.5b`.
+4. The workflow-safe model alias is `qwen2.5-0.5b`, the Codex model ID is `openai/qwen2.5-0.5b`, and both are backed by the Ollama source model `qwen2.5:0.5b`.
 
 Do the following:
 

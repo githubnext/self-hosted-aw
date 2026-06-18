@@ -59,6 +59,7 @@ scripts/run-local-macrunner-qwenollama.sh
 ```
 
 That starts Ollama on the Mac, boots a local x86_64 Lima Linux VM for the `gh-aw` runner, registers that VM with GitHub, dispatches the workflow, and watches the run.
+The agent container reaches the Mac-hosted model through the Lima-side bridge at `http://host.docker.internal:11435/v1`.
 
 For only the Mac-hosted Qwen/Ollama model endpoint, use:
 
@@ -101,7 +102,7 @@ gh aw compile --validate --actionlint
 scripts/patch-local-qwen-awf-pricing.sh
 ```
 
-The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs runtime config for unknown local model aliases. The patch also removes `apiProxy.maxAiCredits` for the local lane by default because AWF v0.27.0 validates `apiProxy.defaultAiCreditsPricing` but does not propagate it into the API proxy container.
+The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs runtime config for unknown local model aliases. The patch also disables the AWF API proxy for the local lane, routes Codex directly to `http://host.docker.internal:11435/v1`, and allows that host port because AWF v0.27.0 drops the custom OpenAI target port when proxying through its API sidecar.
 
 ## Run The Demos
 

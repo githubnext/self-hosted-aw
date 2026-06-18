@@ -198,7 +198,8 @@ start_ollama() {
 model_installed() {
   local model="$1"
 
-  ollama list | awk 'NR > 1 {print $1}' | grep -Fx -- "$model" >/dev/null 2>&1
+  ollama list |
+    awk -v model="$model" 'NR > 1 && ($1 == model || $1 == model ":latest") { found = 1 } END { exit found ? 0 : 1 }'
 }
 
 configure_ollama_host() {
@@ -210,6 +211,7 @@ configure_ollama_host() {
 ensure_qwen_model() {
   local normalized
   local normalized_alias
+  local normalized_provider_alias
 
   normalized="$(printf '%s' "$QWEN_OLLAMA_MODEL" | tr '[:upper:]' '[:lower:]')"
   case "$normalized" in
@@ -230,6 +232,14 @@ ensure_qwen_model() {
   if [[ ! "$QWEN_OLLAMA_MODEL_ALIAS" =~ ^[A-Za-z][A-Za-z0-9._-]*$ ]]; then
     die "QWEN_OLLAMA_MODEL_ALIAS must be AWF-safe: letters, digits, dot, underscore, and hyphen only. Got: ${QWEN_OLLAMA_MODEL_ALIAS}"
   fi
+
+  normalized_provider_alias="$(printf '%s' "$QWEN_OLLAMA_PROVIDER_ALIAS" | tr '[:upper:]' '[:lower:]')"
+  case "$normalized_provider_alias" in
+    openai/qwen*) ;;
+    *)
+      die "QWEN_OLLAMA_PROVIDER_ALIAS must be an OpenAI-qualified Qwen model ID. Got: ${QWEN_OLLAMA_PROVIDER_ALIAS}"
+      ;;
+  esac
 }
 
 ensure_qwen_model_alias() {
@@ -246,6 +256,16 @@ ensure_qwen_model_alias() {
   run ollama cp "$QWEN_OLLAMA_MODEL" "$QWEN_OLLAMA_MODEL_ALIAS"
 }
 
+ensure_qwen_provider_alias() {
+  if model_installed "$QWEN_OLLAMA_PROVIDER_ALIAS"; then
+    say "ok: Qwen provider alias is already installed: ${QWEN_OLLAMA_PROVIDER_ALIAS}"
+    return 0
+  fi
+
+  say "Creating Qwen provider alias for Codex model IDs: ${QWEN_OLLAMA_PROVIDER_ALIAS} -> ${QWEN_OLLAMA_MODEL_ALIAS}"
+  run ollama cp "$QWEN_OLLAMA_MODEL_ALIAS" "$QWEN_OLLAMA_PROVIDER_ALIAS"
+}
+
 configure_repo_variables() {
   local repo="$1"
 
@@ -254,6 +274,7 @@ configure_repo_variables() {
   gh variable set LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL_ALIAS"
   gh variable set QWEN_LOCAL_OPENAI_BASE_URL --repo "$repo" --body "$LOCAL_OPENAI_BASE_URL"
   gh variable set QWEN_LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL_ALIAS"
+  gh variable set LOCAL_AGENT_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_PROVIDER_ALIAS"
 }
 
 register_macos_runner() {
@@ -279,6 +300,7 @@ fi
 
 : "${QWEN_OLLAMA_MODEL:=qwen2.5:0.5b}"
 : "${QWEN_OLLAMA_MODEL_ALIAS:=$(default_qwen_model_alias "$QWEN_OLLAMA_MODEL")}"
+: "${QWEN_OLLAMA_PROVIDER_ALIAS:=openai/${QWEN_OLLAMA_MODEL_ALIAS}}"
 : "${QWEN_RUNNER_LABEL:=qwen2-5-0-5b}"
 : "${EXPOSE_OLLAMA_TO_NETWORK:=0}"
 : "${INSTALL_HOMEBREW:=0}"
@@ -311,6 +333,7 @@ fi
 say "== macOS Qwen/Ollama setup =="
 say "Ollama source model: ${QWEN_OLLAMA_MODEL}"
 say "workflow model alias: ${QWEN_OLLAMA_MODEL_ALIAS}"
+say "Codex provider model alias: ${QWEN_OLLAMA_PROVIDER_ALIAS}"
 say "local OpenAI-compatible URL: ${LOCAL_OPENAI_BASE_URL}"
 say "Ollama bind: ${OLLAMA_HOST_BIND}"
 say "register runner: ${REGISTER_MACOS_RUNNER}"
@@ -342,11 +365,12 @@ else
 fi
 
 ensure_qwen_model_alias
+ensure_qwen_provider_alias
 
 if [[ "$RUN_SMOKE" == "1" ]]; then
   say "Running local Qwen smoke test."
   LOCAL_OPENAI_BASE_URL="$LOCAL_OPENAI_BASE_URL" \
-    LOCAL_OPENAI_MODEL="$QWEN_OLLAMA_MODEL_ALIAS" \
+    LOCAL_OPENAI_MODEL="$QWEN_OLLAMA_PROVIDER_ALIAS" \
     LOCAL_OPENAI_API_KEY="$LOCAL_OPENAI_API_KEY" \
     bash "${repo_root}/scripts/smoke-local-openai-compatible.sh"
 fi
