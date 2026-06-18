@@ -101,7 +101,7 @@ gh aw compile --validate --actionlint
 scripts/patch-local-qwen-awf-pricing.sh
 ```
 
-The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs `apiProxy.defaultAiCreditsPricing` in its runtime config for unknown local model aliases.
+The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows. The local Qwen lane uses a post-compile patch because `gh-aw` currently emits custom local model pricing as workflow metadata, while AWF needs runtime config for unknown local model aliases. The patch also removes `apiProxy.maxAiCredits` for the local lane by default because AWF v0.27.0 validates `apiProxy.defaultAiCreditsPricing` but does not propagate it into the API proxy container.
 
 ## Run The Demos
 

@@ -8,6 +8,7 @@ lock_file="${1:-${repo_root}/.github/workflows/local-macrunner-qwenollama.lock.y
 input_price="${LOCAL_QWEN_AWF_INPUT_PRICE:-0.000001}"
 output_price="${LOCAL_QWEN_AWF_OUTPUT_PRICE:-0.000001}"
 cached_input_price="${LOCAL_QWEN_AWF_CACHED_INPUT_PRICE:-}"
+disable_ai_credits_guard="${LOCAL_QWEN_AWF_DISABLE_AI_CREDITS_GUARD:-1}"
 
 die() {
   printf 'error: %s\n' "$*" >&2
@@ -21,6 +22,7 @@ LOCK_FILE="$lock_file" \
 LOCAL_QWEN_AWF_INPUT_PRICE="$input_price" \
 LOCAL_QWEN_AWF_OUTPUT_PRICE="$output_price" \
 LOCAL_QWEN_AWF_CACHED_INPUT_PRICE="$cached_input_price" \
+LOCAL_QWEN_AWF_DISABLE_AI_CREDITS_GUARD="$disable_ai_credits_guard" \
 node <<'NODE'
 const fs = require("fs");
 
@@ -28,6 +30,7 @@ const lockFile = process.env.LOCK_FILE;
 const input = Number(process.env.LOCAL_QWEN_AWF_INPUT_PRICE);
 const output = Number(process.env.LOCAL_QWEN_AWF_OUTPUT_PRICE);
 const cachedInputRaw = process.env.LOCAL_QWEN_AWF_CACHED_INPUT_PRICE || "";
+const disableAiCreditsGuardRaw = process.env.LOCAL_QWEN_AWF_DISABLE_AI_CREDITS_GUARD || "1";
 
 if (!Number.isFinite(input) || input < 0) {
   throw new Error(`LOCAL_QWEN_AWF_INPUT_PRICE must be a non-negative number: ${process.env.LOCAL_QWEN_AWF_INPUT_PRICE}`);
@@ -36,6 +39,12 @@ if (!Number.isFinite(input) || input < 0) {
 if (!Number.isFinite(output) || output < 0) {
   throw new Error(`LOCAL_QWEN_AWF_OUTPUT_PRICE must be a non-negative number: ${process.env.LOCAL_QWEN_AWF_OUTPUT_PRICE}`);
 }
+
+if (!["0", "1"].includes(disableAiCreditsGuardRaw)) {
+  throw new Error(`LOCAL_QWEN_AWF_DISABLE_AI_CREDITS_GUARD must be 0 or 1: ${disableAiCreditsGuardRaw}`);
+}
+
+const disableAiCreditsGuard = disableAiCreditsGuardRaw === "1";
 
 let cachedInput;
 if (cachedInputRaw !== "") {
@@ -56,6 +65,9 @@ const patched = original.replace(awfConfigPattern, (fullMatch, rawJson) => {
   if (cachedInput !== undefined) {
     config.apiProxy.defaultAiCreditsPricing.cachedInput = cachedInput;
   }
+  if (disableAiCreditsGuard) {
+    delete config.apiProxy.maxAiCredits;
+  }
 
   patchedCount += 1;
   return fullMatch.replace(rawJson, JSON.stringify(config));
@@ -69,5 +81,6 @@ if (patched !== original) {
   fs.writeFileSync(lockFile, patched);
 }
 
-console.log(`patched ${lockFile} with apiProxy.defaultAiCreditsPricing`);
+const guardStatus = disableAiCreditsGuard ? "removed apiProxy.maxAiCredits" : "kept apiProxy.maxAiCredits";
+console.log(`patched ${lockFile} with apiProxy.defaultAiCreditsPricing and ${guardStatus}`);
 NODE
