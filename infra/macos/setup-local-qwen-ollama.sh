@@ -277,9 +277,9 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   die "This helper must be run on macOS."
 fi
 
-: "${QWEN_OLLAMA_MODEL:=qwen3.6:27b}"
+: "${QWEN_OLLAMA_MODEL:=qwen2.5:0.5b}"
 : "${QWEN_OLLAMA_MODEL_ALIAS:=$(default_qwen_model_alias "$QWEN_OLLAMA_MODEL")}"
-: "${QWEN_RUNNER_LABEL:=qwen3-27b}"
+: "${QWEN_RUNNER_LABEL:=qwen2-5-0-5b}"
 : "${EXPOSE_OLLAMA_TO_NETWORK:=0}"
 : "${INSTALL_HOMEBREW:=0}"
 : "${INSTALL_TAILSCALE:=0}"

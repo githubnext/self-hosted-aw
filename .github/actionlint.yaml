@@ -7,7 +7,7 @@ self-hosted-runner:
     - local-model
     - local-macrunner-qwenollama
     - macos-local
-    - qwen3-27b
+    - qwen2-5-0-5b
 
 # Configuration variables in array of strings defined in your repository or
 # organization. `null` means disabling configuration variables check.

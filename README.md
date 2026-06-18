@@ -87,7 +87,7 @@ self-hosted,linux,x64,azure,gh-aw
 self-hosted,linux,x64,local-macrunner-qwenollama,gh-aw
 self-hosted,linux,x64,cloudflare,gh-aw
 self-hosted,macOS,macos-local,local-model
-self-hosted,macOS,macos-local,local-model,qwen3-27b
+self-hosted,macOS,macos-local,local-model,qwen2-5-0-5b
 ```
 
 `gh-aw` self-hosted runners must be Linux hosts with Docker, passwordless sudo for the runner service account, iptables support, and outbound HTTPS access to GitHub, GHCR, the selected engine endpoint, and any domains listed in the workflow network allowlist.

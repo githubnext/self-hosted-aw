@@ -22,10 +22,10 @@ macos-local,local-model
 
 Any Mac with those labels can run `.github/workflows/macos-local-model-smoke.yml`.
 
-For a Mac that hosts a specific larger Qwen model, add a model label too:
+For a Mac that hosts the default tiny Qwen model, add a model label too:
 
 ```text
-qwen3-27b
+qwen2-5-0-5b
 ```
 
 That label lets `.github/workflows/macos-qwen-local-model-smoke.yml` route only to a machine that has the expected Qwen model installed.
@@ -92,7 +92,7 @@ The setup helper:
 
 - Installs `gh` and `ollama` with Homebrew if they are missing.
 - Starts Ollama.
-- Pulls `qwen3.6:27b`.
+- Pulls `qwen2.5:0.5b`.
 - Creates an AWF-safe local model alias for the pulled Qwen model.
 - Smoke-tests Ollama's OpenAI-compatible endpoint.
 - Sets the repository variables used by the local model workflows.
@@ -102,14 +102,14 @@ The setup helper:
 By default, the runner name is:
 
 ```text
-<mac-hostname>-qwen3-27b
+  <mac-hostname>-qwen2-5-0-5b
 ```
 
 Useful overrides:
 
 ```bash
-QWEN_OLLAMA_MODEL=qwen3.6:27b infra/macos/setup-local-qwen-ollama.sh
-QWEN_OLLAMA_MODEL_ALIAS=qwen3.6-27b infra/macos/setup-local-qwen-ollama.sh
+QWEN_OLLAMA_MODEL=qwen2.5:0.5b infra/macos/setup-local-qwen-ollama.sh
+QWEN_OLLAMA_MODEL_ALIAS=qwen2.5-0.5b infra/macos/setup-local-qwen-ollama.sh
 REGISTER_MACOS_RUNNER=0 infra/macos/setup-local-qwen-ollama.sh
 INSTALL_RUNNER_SERVICE=0 infra/macos/setup-local-qwen-ollama.sh
 SET_GITHUB_VARIABLES=0 infra/macos/setup-local-qwen-ollama.sh

@@ -14,33 +14,19 @@ permissions:
   contents: read
   actions: read
 
-imports:
-  - ../aw/imports/qwen-ollama-models.md
-
 runs-on: [self-hosted, linux, x64, local-macrunner-qwenollama, gh-aw]
 runs-on-slim: local-macrunner-qwenollama
 timeout-minutes: 30
 
 engine:
-  id: copilot
+  id: codex
+  model: openai/qwen2.5-0.5b
   env:
-    COPILOT_PROVIDER_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
-    COPILOT_PROVIDER_API_KEY: "${{ secrets.LOCAL_AGENT_OPENAI_API_KEY || 'ollama' }}"
-    COPILOT_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5-0.5b' }}"
-    COPILOT_PROVIDER_TYPE: "openai"
-    COPILOT_PROVIDER_WIRE_API: "completions"
-    COPILOT_PROVIDER_MAX_PROMPT_TOKENS: "12000"
-    COPILOT_PROVIDER_MAX_OUTPUT_TOKENS: "1200"
+    OPENAI_BASE_URL: "http://host.docker.internal:11435/v1"
+    OPENAI_API_KEY: "${{ secrets.LOCAL_AGENT_OPENAI_API_KEY || 'ollama' }}"
 
 models:
   providers:
-    github-copilot:
-      models:
-        qwen2.5-0.5b:
-          cost:
-            input: "1e-09"
-            output: "1e-09"
-            cache_read: "1e-09"
     openai:
       models:
         qwen2.5-0.5b:
@@ -94,8 +80,8 @@ Do the following:
 
 1. Inspect the current workspace and runner context.
 2. Read the output or rerun `bash scripts/check-gh-aw-runner.sh` if needed.
-3. Confirm the engine configuration is using Copilot BYOK mode with `COPILOT_PROVIDER_BASE_URL` pointing at the local runner proxy.
-4. Confirm the requested model is the configured tiny Qwen model alias, defaulting to `qwen2.5-0.5b`.
+3. Confirm the engine configuration is using the Codex engine with `OPENAI_BASE_URL` pointing at the local runner proxy.
+4. Confirm the requested model is the configured tiny Qwen model alias, defaulting to `openai/qwen2.5-0.5b` in the workflow and `qwen2.5-0.5b` on the Ollama wire.
 5. Summarize whether the local Mac Qwen/Ollama lane is suitable for `gh-aw` agent workloads.
 6. Do not modify repository files.
 

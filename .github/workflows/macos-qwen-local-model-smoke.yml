@@ -9,7 +9,7 @@ permissions:
 jobs:
   smoke:
     name: macOS Qwen local model runner
-    runs-on: [self-hosted, macOS, macos-local, local-model, qwen3-27b]
+    runs-on: [self-hosted, macOS, macos-local, local-model, qwen2-5-0-5b]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -21,6 +21,6 @@ jobs:
       - name: Smoke test local Qwen model
         env:
           LOCAL_OPENAI_BASE_URL: ${{ vars.QWEN_LOCAL_OPENAI_BASE_URL || vars.LOCAL_OPENAI_BASE_URL || 'http://127.0.0.1:11434/v1' }}
-          LOCAL_OPENAI_MODEL: ${{ vars.QWEN_LOCAL_OPENAI_MODEL || 'qwen3.6:27b' }}
+          LOCAL_OPENAI_MODEL: ${{ vars.QWEN_LOCAL_OPENAI_MODEL || 'qwen2.5-0.5b' }}
           LOCAL_OPENAI_API_KEY: ${{ secrets.QWEN_LOCAL_OPENAI_API_KEY || secrets.LOCAL_OPENAI_API_KEY }}
         run: bash scripts/smoke-local-openai-compatible.sh
