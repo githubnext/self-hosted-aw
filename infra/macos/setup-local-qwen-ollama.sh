@@ -327,6 +327,6 @@ say "Mac-side setup complete."
 say "Run the Qwen smoke workflow with:"
 say "  gh workflow run macos-qwen-local-model-smoke.yml"
 say
-say "If this Mac serves a nearby Linux gh-aw runner, make sure that runner can reach:"
+say "If this Mac serves the local Lima Linux gh-aw runner or another Linux host, make sure that runner can reach:"
 say "  ${LOCAL_OPENAI_BASE_URL}"
 say "Use EXPOSE_OLLAMA_TO_NETWORK=1 when the endpoint must be reachable beyond localhost."

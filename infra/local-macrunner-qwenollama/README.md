@@ -1,8 +1,8 @@
-# Local Mac Qwen/Ollama Linux gh-aw runner
+# All-local Mac Qwen/Ollama gh-aw runner
 
 This helper prepares the Linux self-hosted runner needed by `.github/workflows/local-macrunner-qwenollama.md`.
 
-The macOS runner can smoke-test local Ollama directly, but the `gh-aw` agent job itself needs Linux, Docker, passwordless sudo, and iptables. Run this helper inside the Linux VM or Linux host that should execute the agent job.
+The macOS host serves Qwen through Ollama and also hosts the `gh-aw` runner. Because the `gh-aw` agent job needs Linux, Docker, passwordless sudo, and iptables, the all-local path uses a local x86_64 Lima Linux VM as the GitHub Actions runner while Ollama stays on the Mac host.
 
 ## Smallest Model Default
 
@@ -14,9 +14,35 @@ qwen2.5:0.5b
 
 That is intentionally tiny for smoke-testing the plumbing. It is not expected to be a strong coding agent; it is the lightest Qwen model this demo uses to prove the end-to-end local path.
 
-## Mac Side
+## All-Local Mac Path
 
-On the Mac, make sure Ollama is running and reachable from the Linux VM. For a VM or nearby Linux host, expose Ollama deliberately:
+On the Mac:
+
+```bash
+scripts/run-local-macrunner-qwenollama.sh "Check the local agent lane."
+```
+
+The launcher:
+
+- Starts or verifies the Mac-hosted Qwen/Ollama endpoint.
+- Creates or starts a local x86_64 Lima Linux VM named `gh-aw-local-qwen`.
+- Runs the Linux runner bootstrap inside that VM.
+- Registers the VM with `self-hosted,linux,x64,local-macrunner-qwenollama,gh-aw`.
+- Dispatches `.github/workflows/local-macrunner-qwenollama.lock.yml`.
+- Watches the run by default.
+
+Useful all-local overrides:
+
+```bash
+WATCH=0 scripts/run-local-macrunner-qwenollama.sh
+DRY_RUN=1 scripts/run-local-macrunner-qwenollama.sh
+LOCAL_AGENT_MODEL=qwen2.5:0.5b scripts/run-local-macrunner-qwenollama.sh
+LIMA_INSTANCE=my-gh-aw-runner scripts/run-local-macrunner-qwenollama.sh
+```
+
+## Mac Endpoint Only
+
+On the Mac, make sure Ollama is running and reachable from the local Lima Linux VM. If you are using a separate Linux host instead of the default local VM, expose Ollama deliberately:
 
 ```bash
 EXPOSE_OLLAMA_TO_NETWORK=1 \
@@ -42,8 +68,8 @@ The helper:
 - Creates an `actions` user with passwordless sudo.
 - Sets repository variables for the local agent endpoint and tiny Qwen model.
 - Registers a GitHub Actions runner with `local-macrunner-qwenollama,gh-aw`.
-- Starts a local proxy from `127.0.0.1:8080` to the Mac-hosted Ollama endpoint.
-- Adds `host.docker.internal` on the Linux host so the workflow pre-step and `gh-aw` container both use `http://host.docker.internal:8080/v1`.
+- Starts a local proxy from `127.0.0.1:11435` to the Mac-hosted Ollama endpoint.
+- Adds `host.docker.internal` on the Linux host so the workflow pre-step and `gh-aw` container both use `http://host.docker.internal:11435/v1`.
 
 Useful overrides:
 
@@ -64,13 +90,13 @@ OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 \
 scripts/run-local-macrunner-qwenollama.sh
 ```
 
-After the runner is already set up, the same command can be run from any machine with `gh` access:
+After the runner is already set up, the launcher can also be run from any machine with `gh` access:
 
 ```bash
 scripts/run-local-macrunner-qwenollama.sh
 ```
 
-When run on Linux, the script starts or registers the runner before dispatching the workflow. When run on macOS or another machine, it verifies that a matching Linux runner is already online before dispatching.
+When run on Linux, the script starts or registers the runner before dispatching the workflow. When run on macOS, it uses a local Lima VM for the Linux runner. Set `SETUP_RUNNER=0` to only verify an existing runner and dispatch.
 
 Useful run overrides:
 

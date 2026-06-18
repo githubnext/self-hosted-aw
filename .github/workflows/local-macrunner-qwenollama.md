@@ -1,5 +1,5 @@
 ---
-description: "Run a gh-aw agent on a Linux self-hosted runner wired to a local Mac-hosted Qwen/Ollama endpoint."
+description: "Run a gh-aw agent on a local Mac-hosted Linux runner VM wired to the Mac's Qwen/Ollama endpoint."
 labels: ["demo", "self-hosted", "local", "mac", "qwen", "ollama"]
 
 on:
@@ -15,13 +15,14 @@ permissions:
   actions: read
 
 runs-on: [self-hosted, linux, x64, local-macrunner-qwenollama, gh-aw]
-runs-on-slim: ubuntu-latest
+runs-on-slim: local-macrunner-qwenollama
 timeout-minutes: 30
 
 engine:
   id: copilot
   env:
-    COPILOT_PROVIDER_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:8080/v1' }}"
+    COPILOT_PROVIDER_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
+    COPILOT_PROVIDER_API_KEY: "${{ secrets.LOCAL_AGENT_OPENAI_API_KEY || 'ollama' }}"
     COPILOT_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5:0.5b' }}"
     COPILOT_PROVIDER_TYPE: "openai"
     COPILOT_PROVIDER_WIRE_API: "completions"
@@ -49,7 +50,7 @@ steps:
     run: bash scripts/check-gh-aw-runner.sh
   - name: Smoke test local Qwen/Ollama endpoint
     env:
-      LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:8080/v1' }}"
+      LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
       LOCAL_OPENAI_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5:0.5b' }}"
       LOCAL_OPENAI_API_KEY: "ollama"
     run: bash scripts/smoke-local-openai-compatible.sh
@@ -58,15 +59,15 @@ steps:
 
 # Local Mac Runner Qwen/Ollama Agent
 
-You are running inside a GitHub Agentic Workflow on a Linux self-hosted runner that is connected to a local Mac-hosted Ollama endpoint.
+You are running inside a GitHub Agentic Workflow on a Linux self-hosted runner VM hosted by the same local Mac that serves the Ollama endpoint.
 
 Goal: demonstrate that this repository can run an agentic workflow while routing inference to a local Qwen model served by Ollama.
 
 Important runtime shape:
 
-1. The `gh-aw` agent job itself must run on Linux with Docker, sudo, and iptables.
-2. The local Qwen model is served by Ollama from the nearby Mac.
-3. The model endpoint should be reachable at `http://host.docker.internal:8080/v1` from the agent runner environment.
+1. The `gh-aw` agent job itself runs in a local x86_64 Linux VM with Docker, sudo, and iptables.
+2. The local Qwen model is served by Ollama on the Mac host.
+3. The model endpoint is proxied through the VM and should be reachable at `http://host.docker.internal:11435/v1` from the agent runner environment.
 
 Do the following:
 

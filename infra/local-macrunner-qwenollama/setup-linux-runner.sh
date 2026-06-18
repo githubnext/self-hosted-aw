@@ -78,6 +78,13 @@ install_packages() {
 
   have apt-get || die "Automatic package installation currently expects apt-get. Set INSTALL_PACKAGES=0 and install prerequisites manually on this distro."
 
+  sudo_cmd apt-get update
+  sudo_cmd apt-get install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    sudo
+
   sudo_cmd install -m 0755 -d /etc/apt/keyrings
   if [[ ! -f /etc/apt/keyrings/docker.asc ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo_cmd tee /etc/apt/keyrings/docker.asc >/dev/null
@@ -91,20 +98,31 @@ install_packages() {
       sudo_cmd tee /etc/apt/sources.list.d/docker.list >/dev/null
   fi
 
+  if [[ ! -f /etc/apt/keyrings/githubcli-archive-keyring.gpg ]]; then
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg |
+      sudo_cmd tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+    sudo_cmd chmod a+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  fi
+
+  if [[ ! -f /etc/apt/sources.list.d/github-cli.list ]]; then
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" |
+      sudo_cmd tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+  fi
+
   sudo_cmd apt-get update
   sudo_cmd apt-get install -y \
-    ca-certificates \
-    curl \
     docker-buildx-plugin \
     docker-ce \
     docker-ce-cli \
     docker-compose-plugin \
     git \
+    gh \
     iptables \
     jq \
+    nodejs \
+    npm \
     python3 \
     socat \
-    sudo \
     tar
 
   sudo_cmd systemctl enable --now docker
@@ -137,9 +155,97 @@ ensure_runner_user() {
 
   sudo_cmd usermod -aG sudo "$RUNNER_USER"
   sudo_cmd usermod -aG docker "$RUNNER_USER"
-  printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$RUNNER_USER" |
+  printf '%s ALL=(ALL) NOPASSWD:SETENV:ALL\n' "$RUNNER_USER" |
     sudo_cmd tee "/etc/sudoers.d/${RUNNER_USER}-gh-aw" >/dev/null
   sudo_cmd chmod 0440 "/etc/sudoers.d/${RUNNER_USER}-gh-aw"
+}
+
+prepare_gh_aw_home() {
+  sudo_cmd install -d -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0755 /home/runner /home/runner/.copilot
+}
+
+configure_runner_npm() {
+  local npm_cache_dir="${RUNNER_DIR}/_work/_tool/npm-cache"
+  local runner_home
+
+  runner_home="$(getent passwd "$RUNNER_USER" | awk -F: '{print $6}')"
+  [[ -n "$runner_home" ]] || die "Could not determine home directory for runner user: $RUNNER_USER"
+
+  sudo_cmd install -d -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0755 "$runner_home"
+  sudo_cmd install -d -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0755 "$npm_cache_dir"
+  sudo_cmd chown -R "$RUNNER_USER:$RUNNER_USER" "$npm_cache_dir"
+  if [[ -d "${runner_home}/.npm" ]]; then
+    sudo_cmd chown -R "$RUNNER_USER:$RUNNER_USER" "${runner_home}/.npm"
+  fi
+
+  sudo_cmd tee "${runner_home}/.npmrc" >/dev/null <<EOF
+audit=false
+fund=false
+cache=${npm_cache_dir}
+EOF
+  sudo_cmd chown "$RUNNER_USER:$RUNNER_USER" "${runner_home}/.npmrc"
+  sudo_cmd chmod 0644 "${runner_home}/.npmrc"
+}
+
+install_npm_wrapper() {
+  if [[ ! -x /usr/bin/npm ]]; then
+    return 0
+  fi
+
+  sudo_cmd tee /usr/local/bin/npm >/dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_npm=/usr/bin/npm
+
+is_gh_aw_artifact_install() {
+  [[ "$PWD" == */_work/_temp/gh-aw/actions ]] || return 1
+  [[ "${1:-}" == "install" ]] || return 1
+
+  local arg
+  for arg in "$@"; do
+    if [[ "$arg" == "@actions/artifact@^6.0.0" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+if is_gh_aw_artifact_install "$@"; then
+  moved_package_json=0
+  original_package_json=""
+
+  if [[ -f package.json ]]; then
+    original_package_json="$(mktemp package.json.XXXXXX)"
+    mv package.json "$original_package_json"
+    moved_package_json=1
+  fi
+
+  restore_package_json() {
+    status=$?
+    rm -f package.json
+    if [[ "$moved_package_json" == "1" && -n "$original_package_json" ]]; then
+      mv "$original_package_json" package.json
+    fi
+    exit "$status"
+  }
+
+  trap restore_package_json EXIT
+  printf '{"private":true}\n' > package.json
+  "$real_npm" "$@"
+  exit "$?"
+fi
+
+exec "$real_npm" "$@"
+EOF
+  sudo_cmd chmod 0755 /usr/local/bin/npm
+}
+
+clean_gh_aw_temp() {
+  if [[ -d "${RUNNER_DIR}/_work/_temp/gh-aw" ]]; then
+    sudo_cmd rm -rf "${RUNNER_DIR}/_work/_temp/gh-aw"
+  fi
 }
 
 parse_url_host_port() {
@@ -208,9 +314,12 @@ configure_ollama_proxy() {
   local upstream_base_url="$1"
   local listen_host="${OLLAMA_PROXY_LISTEN%:*}"
   local listen_port="${OLLAMA_PROXY_LISTEN##*:}"
+  local proxy_url="http://host.docker.internal:${listen_port}/v1/models"
+  local proxy_ready=0
   local upstream_host
   local upstream_port
   local parsed
+  local attempt=0
 
   parsed="$(parse_url_host_port "$upstream_base_url")"
   upstream_host="$(printf '%s\n' "$parsed" | sed -n '1p')"
@@ -232,10 +341,20 @@ WantedBy=multi-user.target
 EOF
 
   sudo_cmd systemctl daemon-reload
-  sudo_cmd systemctl enable --now gh-aw-ollama-proxy.service
+  sudo_cmd systemctl enable gh-aw-ollama-proxy.service
+  sudo_cmd systemctl restart gh-aw-ollama-proxy.service
   configure_host_alias
 
-  if curl -fsS --connect-timeout 3 --max-time 10 "http://host.docker.internal:${listen_port}/v1/models" >/dev/null; then
+  while (( attempt < 20 )); do
+    attempt=$((attempt + 1))
+    if curl -fsS --connect-timeout 3 --max-time 10 "$proxy_url" >/dev/null; then
+      proxy_ready=1
+      break
+    fi
+    sleep 1
+  done
+
+  if [[ "$proxy_ready" == "1" ]]; then
     say "ok: Ollama proxy is reachable at http://host.docker.internal:${listen_port}/v1"
   else
     die "Ollama proxy did not become reachable at http://host.docker.internal:${listen_port}/v1"
@@ -276,6 +395,10 @@ normalize_qwen_model
 install_packages
 ensure_gh_auth
 ensure_runner_user
+prepare_gh_aw_home
+configure_runner_npm
+install_npm_wrapper
+clean_gh_aw_temp
 
 upstream="$(select_upstream || true)"
 if [[ -z "$upstream" ]]; then

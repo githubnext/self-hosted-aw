@@ -7,13 +7,13 @@ The repo has five demo lanes:
 - Azure VM runner: a `gh-aw` workflow routed to `[self-hosted, linux, x64, azure]`.
 - Cloudflare runner lane: a `gh-aw` workflow routed to `[self-hosted, linux, x64, cloudflare]`, with an explicit capability check for Docker, sudo, iptables, and egress.
 - OpenRouter inference: Codex is configured with `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and `OPENAI_API_KEY=${{ secrets.OPENROUTER_API_KEY }}`.
-- Local Mac Qwen/Ollama inference: a `gh-aw` workflow routed to `[self-hosted, linux, x64, local-macrunner-qwenollama]` and pointed at a Mac-hosted Ollama endpoint.
+- Local Mac Qwen/Ollama inference: a `gh-aw` workflow routed to `[self-hosted, linux, x64, local-macrunner-qwenollama]`, with both the Linux runner VM and Ollama endpoint hosted on the same Mac by default.
 - macOS local model runner: a regular GitHub Actions workflow routed to `[self-hosted, macOS, macos-local, local-model]` and pointed at a local OpenAI-compatible endpoint such as Ollama.
 
 ## Repository Map
 
 - `.github/workflows/azure-vm-openrouter.md` - agentic workflow for an Azure-hosted runner.
-- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow for a Linux runner wired to a Mac-hosted Qwen/Ollama endpoint.
+- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow for the all-local Mac lane: Lima Linux runner VM plus Mac-hosted Qwen/Ollama endpoint.
 - `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow for a Cloudflare-labeled runner lane.
 - `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
 - `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
@@ -24,9 +24,9 @@ The repo has five demo lanes:
 - `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
 - `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
 - `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
-- `scripts/run-local-macrunner-qwenollama.sh` - starts or verifies the local Mac Qwen/Ollama `gh-aw` runner lane and dispatches the agentic workflow.
+- `scripts/run-local-macrunner-qwenollama.sh` - starts or verifies the all-local Mac Qwen/Ollama `gh-aw` runner lane and dispatches the agentic workflow.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
-- `infra/local-macrunner-qwenollama/` - Linux runner bootstrap for the local Mac Qwen/Ollama agentic lane.
+- `infra/local-macrunner-qwenollama/` - Lima/Linux runner bootstrap for the local Mac Qwen/Ollama agentic lane.
 - `infra/macos/` - generic macOS runner registration/removal helpers, Qwen/Ollama setup, and local model notes.
 - `infra/cloudflare/` - Cloudflare runner notes and constraints.
 
@@ -52,19 +52,21 @@ gh variable set OPENROUTER_SITE_URL --body "https://github.com/OWNER/REPO"
 gh variable set OPENROUTER_APP_NAME --body "gh-aw-self-hosted-demo"
 ```
 
-For the smallest local Qwen/Ollama agent model endpoint on a Mac, use:
+For the all-local Mac path, use the launcher:
+
+```bash
+scripts/run-local-macrunner-qwenollama.sh
+```
+
+That starts Ollama on the Mac, boots a local x86_64 Lima Linux VM for the `gh-aw` runner, registers that VM with GitHub, dispatches the workflow, and watches the run.
+
+For only the Mac-hosted Qwen/Ollama model endpoint, use:
 
 ```bash
 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
 ```
 
-If a nearby Linux `gh-aw` runner must reach that Mac over the network, expose the endpoint deliberately:
-
-```bash
-EXPOSE_OLLAMA_TO_NETWORK=1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
-```
-
-For the matching Linux `gh-aw` runner, run the same helper inside the Linux VM or host:
+For the matching Linux `gh-aw` runner on a separate Linux host instead of the default local Lima VM, run:
 
 ```bash
 OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh

@@ -32,7 +32,7 @@ case "$(uname -s)" in
     say "Model: ${QWEN_OLLAMA_MODEL}"
     say "Register macOS runner: ${REGISTER_MACOS_RUNNER}"
     if [[ "${EXPOSE_OLLAMA_TO_NETWORK:-0}" == "1" ]]; then
-      say "Ollama will be exposed on the Mac network interface for a nearby Linux runner."
+      say "Ollama will be exposed on the Mac network interface for the local Lima VM or another Linux runner."
     else
       say "Ollama will stay bound to localhost. Set EXPOSE_OLLAMA_TO_NETWORK=1 if a Linux runner must reach this Mac over the network."
     fi
