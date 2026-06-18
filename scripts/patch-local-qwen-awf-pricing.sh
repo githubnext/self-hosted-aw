@@ -143,11 +143,9 @@ if (hostPortsCount !== 1 && !patched.includes(`--allow-host-ports ${hostPorts}`)
 }
 
 const openAiExclude = " --exclude-env OPENAI_API_KEY";
-if (patched.includes(openAiExclude)) {
-  patched = patched.replace(openAiExclude, "");
-}
+patched = patched.replace(/ --env OPENAI_API_KEY=ollama/g, "");
 
-if (!patched.includes("--env OPENAI_API_KEY=ollama")) {
+if (!patched.includes(`--env OPENAI_BASE_URL=${shellQuote(directBaseUrl)}`)) {
   const envAllNeedle = " --env-all ";
   if (!patched.includes(envAllNeedle)) {
     throw new Error(`expected to find --env-all in AWF invocation in ${lockFile}`);
@@ -155,8 +153,17 @@ if (!patched.includes("--env OPENAI_API_KEY=ollama")) {
 
   patched = patched.replace(
     envAllNeedle,
-    ` --env OPENAI_API_KEY=ollama --env OPENAI_BASE_URL=${shellQuote(directBaseUrl)} --env-all `
+    ` --env OPENAI_BASE_URL=${shellQuote(directBaseUrl)} --env-all `
   );
+}
+
+if (!patched.includes(openAiExclude)) {
+  const envAllNeedle = " --env-all ";
+  if (!patched.includes(envAllNeedle)) {
+    throw new Error(`expected to find --env-all in AWF invocation in ${lockFile}`);
+  }
+
+  patched = patched.replace(envAllNeedle, `${openAiExclude} --env-all `);
 }
 
 patched = patched.replace(
