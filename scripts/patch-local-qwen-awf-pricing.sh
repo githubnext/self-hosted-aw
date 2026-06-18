@@ -85,6 +85,7 @@ let patched = original.replace(awfConfigPattern, (fullMatch, rawJson) => {
   const config = JSON.parse(rawJson);
   config.apiProxy ||= {};
   config.apiProxy.enabled = false;
+  config.apiProxy.enableTokenSteering = false;
   config.apiProxy.defaultAiCreditsPricing = { input, output };
   if (cachedInput !== undefined) {
     config.apiProxy.defaultAiCreditsPricing.cachedInput = cachedInput;
