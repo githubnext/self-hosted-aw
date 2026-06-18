@@ -24,6 +24,7 @@ The repo has five demo lanes:
 - `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
 - `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
 - `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
+- `scripts/run-local-macrunner-qwenollama.sh` - starts or verifies the local Mac Qwen/Ollama `gh-aw` runner lane and dispatches the agentic workflow.
 - `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
 - `infra/local-macrunner-qwenollama/` - Linux runner bootstrap for the local Mac Qwen/Ollama agentic lane.
 - `infra/macos/` - generic macOS runner registration/removal helpers, Qwen/Ollama setup, and local model notes.
@@ -69,6 +70,12 @@ For the matching Linux `gh-aw` runner, run the same helper inside the Linux VM o
 OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
 ```
 
+To start or verify that Linux runner and dispatch the local agent workflow in one command:
+
+```bash
+OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 scripts/run-local-macrunner-qwenollama.sh
+```
+
 ## Runner Labels
 
 Register self-hosted runners with these labels:
@@ -108,7 +115,7 @@ Then run an agentic workflow:
 
 ```bash
 gh aw run azure-vm-openrouter
-gh aw run local-macrunner-qwenollama
+scripts/run-local-macrunner-qwenollama.sh
 gh aw run cloudflare-runner-openrouter
 ```
 
