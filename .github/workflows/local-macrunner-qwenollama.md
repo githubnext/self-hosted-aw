@@ -27,7 +27,7 @@ engine:
     OPENAI_API_KEY: "ollama"
     OPENAI_BASE_URL: "http://host.docker.internal:11435/v1"
     OPENCODE_CONFIG_CONTENT: >-
-      {"$schema":"https://opencode.ai/config.json","provider":{"openai":{"npm":"@ai-sdk/openai-compatible","name":"Ollama (local)","options":{"baseURL":"http://host.docker.internal:11435/v1","apiKey":"ollama"},"models":{"qwen2.5-0.5b":{"name":"Qwen 2.5 0.5B (local)"}}}},"enabled_providers":["openai"],"model":"openai/qwen2.5-0.5b","small_model":"openai/qwen2.5-0.5b"}
+      {"provider":{"openai":{"npm":"@ai-sdk/openai-compatible","name":"Ollama (local)","options":{"baseURL":"http://host.docker.internal:11435/v1","apiKey":"ollama"},"models":{"qwen2.5-0.5b":{"name":"Qwen 2.5 0.5B (local)"}}}},"enabled_providers":["openai"],"model":"openai/qwen2.5-0.5b","small_model":"openai/qwen2.5-0.5b"}
 
 models:
   providers:
