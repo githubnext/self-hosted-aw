@@ -1,24 +1,22 @@
-# Self-hosted agentic workflow demonstrator
+# Agentic Workflows with self-hosted runners and local inference
 
-This repository demonstrates how GitHub Agentic Workflows can run on self-hosted GitHub Actions runners and talk to OpenAI-compatible inference endpoints that you control.
+This repository demonstrates how [GitHub Agentic Workflows](https://github.github.com/gh-aw/) can be used with: 
 
-The two primary scenario guides are:
+- self-hosted runners
+- model-routing platforms
+- local inference
+
+You can even run your Actions jobs, including AI models, directly on your laptop or Mac Mini.
+
+We provide the following example scenarios:
 
 - [Azure VM self-hosted runner with OpenRouter](infra/azure-vm/README.md)
 - [Local Mac self-hosted runner with Lima, Ollama, and Qwen](infra/local-macrunner-qwenollama/README.md)
 
-These lanes are examples, not limits. The point of the repository is to show the shape of the system: an agentic workflow can be pinned to a runner you operate, given the host capabilities it needs, and routed to whatever inference endpoint makes sense for your environment. Swap Azure for another VM provider, Lima for another Linux host, OpenRouter for another OpenAI-compatible gateway, or Ollama/Qwen for another local OpenAI-compatible model service.
 
-## What This Proves
+## Why self-host?
 
-Agentic Workflows are ordinary GitHub Actions workflows after compilation, but the agent job has extra runtime needs. A self-hosted lane lets you control those needs directly:
-
-- The runner host can live in your cloud, your private network, or on your laptop.
-- The runner can have Docker, sudo, iptables, private network routes, local disks, GPUs, caches, or internal service access.
-- The model endpoint can be remote, private, local, metered, unmetered, small, large, hosted, or self-hosted, as long as the agent harness can call it.
-- The workflow still uses GitHub dispatch, logs, artifacts, permissions, labels, and reviewable generated lock files.
-
-The repository includes one external-inference lane and one all-local lane:
+Self-hosting runners gives you extra control over your Actions execution environment, and your choice of hosting platform. Choosing a model-routing platform like Open Router can give you access to additional models, and hosting your inference yourself can help control costs. Frontier models still require datacenter-scale resources to host, but there are models small enough to run on a MacBook Air that can still perform useful work. 
 
 ```mermaid
 flowchart LR
