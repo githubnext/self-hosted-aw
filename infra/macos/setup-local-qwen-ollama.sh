@@ -129,6 +129,14 @@ ollama_ready() {
   curl -fsS --connect-timeout 2 --max-time 5 "${OLLAMA_HEALTH_URL}/api/version" >/dev/null 2>&1
 }
 
+default_qwen_model_alias() {
+  local alias
+
+  alias="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  alias="$(printf '%s' "$alias" | sed -e 's#[:/]#-#g' -e 's/[^a-z0-9._-]/-/g' -e 's/^[.-]*//' -e 's/[.-]*$//')"
+  printf '%s\n' "${alias:-qwen-local}"
+}
+
 wait_for_ollama() {
   local attempt=0
 
@@ -188,7 +196,10 @@ start_ollama() {
 }
 
 model_installed() {
-  ollama list | awk 'NR > 1 {print $1}' | grep -Fx -- "$QWEN_OLLAMA_MODEL" >/dev/null 2>&1
+  local model="$1"
+
+  ollama list |
+    awk -v model="$model" 'NR > 1 && ($1 == model || $1 == model ":latest") { found = 1 } END { exit found ? 0 : 1 }'
 }
 
 configure_ollama_host() {
@@ -199,6 +210,8 @@ configure_ollama_host() {
 
 ensure_qwen_model() {
   local normalized
+  local normalized_alias
+  local normalized_compat_alias
 
   normalized="$(printf '%s' "$QWEN_OLLAMA_MODEL" | tr '[:upper:]' '[:lower:]')"
   case "$normalized" in
@@ -207,6 +220,56 @@ ensure_qwen_model() {
       die "QWEN_OLLAMA_MODEL must be a Qwen model ID. Got: ${QWEN_OLLAMA_MODEL}"
       ;;
   esac
+
+  normalized_alias="$(printf '%s' "$QWEN_OLLAMA_MODEL_ALIAS" | tr '[:upper:]' '[:lower:]')"
+  case "$normalized_alias" in
+    qwen*) ;;
+    *)
+      die "QWEN_OLLAMA_MODEL_ALIAS must be a Qwen model ID. Got: ${QWEN_OLLAMA_MODEL_ALIAS}"
+      ;;
+  esac
+
+  if [[ ! "$QWEN_OLLAMA_MODEL_ALIAS" =~ ^[A-Za-z][A-Za-z0-9._-]*$ ]]; then
+    die "QWEN_OLLAMA_MODEL_ALIAS must be AWF-safe: letters, digits, dot, underscore, and hyphen only. Got: ${QWEN_OLLAMA_MODEL_ALIAS}"
+  fi
+
+  if [[ -n "${QWEN_OLLAMA_COMPAT_ALIAS:-}" ]]; then
+    normalized_compat_alias="$(printf '%s' "$QWEN_OLLAMA_COMPAT_ALIAS" | tr '[:upper:]' '[:lower:]')"
+    case "$normalized_compat_alias" in
+      openai/qwen*) ;;
+      *)
+        die "QWEN_OLLAMA_COMPAT_ALIAS must be an OpenCode OpenAI-provider Qwen model ID. Got: ${QWEN_OLLAMA_COMPAT_ALIAS}"
+        ;;
+    esac
+  fi
+}
+
+ensure_qwen_model_alias() {
+  if [[ "$QWEN_OLLAMA_MODEL_ALIAS" == "$QWEN_OLLAMA_MODEL" ]]; then
+    return 0
+  fi
+
+  if model_installed "$QWEN_OLLAMA_MODEL_ALIAS"; then
+    say "ok: Qwen model alias is already installed: ${QWEN_OLLAMA_MODEL_ALIAS}"
+    return 0
+  fi
+
+  say "Creating Qwen model alias for AWF-safe model IDs: ${QWEN_OLLAMA_MODEL_ALIAS} -> ${QWEN_OLLAMA_MODEL}"
+  run ollama cp "$QWEN_OLLAMA_MODEL" "$QWEN_OLLAMA_MODEL_ALIAS"
+}
+
+ensure_qwen_compat_alias() {
+  if [[ -z "${QWEN_OLLAMA_COMPAT_ALIAS:-}" || "$QWEN_OLLAMA_COMPAT_ALIAS" == "$QWEN_OLLAMA_MODEL" || "$QWEN_OLLAMA_COMPAT_ALIAS" == "$QWEN_OLLAMA_MODEL_ALIAS" ]]; then
+    return 0
+  fi
+
+  if model_installed "$QWEN_OLLAMA_COMPAT_ALIAS"; then
+    say "ok: Qwen OpenCode compatibility alias is already installed: ${QWEN_OLLAMA_COMPAT_ALIAS}"
+    return 0
+  fi
+
+  say "Creating Qwen OpenCode compatibility alias: ${QWEN_OLLAMA_COMPAT_ALIAS} -> ${QWEN_OLLAMA_MODEL}"
+  run ollama cp "$QWEN_OLLAMA_MODEL" "$QWEN_OLLAMA_COMPAT_ALIAS"
 }
 
 configure_repo_variables() {
@@ -214,9 +277,10 @@ configure_repo_variables() {
 
   say "Setting GitHub repository variables for ${repo}."
   gh variable set LOCAL_OPENAI_BASE_URL --repo "$repo" --body "$LOCAL_OPENAI_BASE_URL"
-  gh variable set LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL"
+  gh variable set LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL_ALIAS"
   gh variable set QWEN_LOCAL_OPENAI_BASE_URL --repo "$repo" --body "$LOCAL_OPENAI_BASE_URL"
-  gh variable set QWEN_LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL"
+  gh variable set QWEN_LOCAL_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL_ALIAS"
+  gh variable set LOCAL_AGENT_OPENAI_MODEL --repo "$repo" --body "$QWEN_OLLAMA_MODEL_ALIAS"
 }
 
 register_macos_runner() {
@@ -240,8 +304,10 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   die "This helper must be run on macOS."
 fi
 
-: "${QWEN_OLLAMA_MODEL:=qwen3.6:27b}"
-: "${QWEN_RUNNER_LABEL:=qwen3-27b}"
+: "${QWEN_OLLAMA_MODEL:=qwen2.5:0.5b}"
+: "${QWEN_OLLAMA_MODEL_ALIAS:=$(default_qwen_model_alias "$QWEN_OLLAMA_MODEL")}"
+: "${QWEN_OLLAMA_COMPAT_ALIAS:=openai/${QWEN_OLLAMA_MODEL_ALIAS}}"
+: "${QWEN_RUNNER_LABEL:=qwen2-5-0-5b}"
 : "${EXPOSE_OLLAMA_TO_NETWORK:=0}"
 : "${INSTALL_HOMEBREW:=0}"
 : "${INSTALL_TAILSCALE:=0}"
@@ -271,7 +337,9 @@ if [[ -z "${RUNNER_NAME:-}" ]]; then
 fi
 
 say "== macOS Qwen/Ollama setup =="
-say "model: ${QWEN_OLLAMA_MODEL}"
+say "Ollama source model: ${QWEN_OLLAMA_MODEL}"
+say "workflow model alias: ${QWEN_OLLAMA_MODEL_ALIAS}"
+say "OpenCode compatibility alias: ${QWEN_OLLAMA_COMPAT_ALIAS}"
 say "local OpenAI-compatible URL: ${LOCAL_OPENAI_BASE_URL}"
 say "Ollama bind: ${OLLAMA_HOST_BIND}"
 say "register runner: ${REGISTER_MACOS_RUNNER}"
@@ -293,7 +361,7 @@ fi
 configure_ollama_host
 start_ollama
 
-if model_installed; then
+if model_installed "$QWEN_OLLAMA_MODEL"; then
   say "ok: Qwen model is already installed: ${QWEN_OLLAMA_MODEL}"
 elif [[ "$PULL_MODEL" == "1" ]]; then
   say "Pulling Qwen model: ${QWEN_OLLAMA_MODEL}"
@@ -302,10 +370,13 @@ else
   warn "Qwen model is not installed and PULL_MODEL=0, so the model pull was skipped: ${QWEN_OLLAMA_MODEL}"
 fi
 
+ensure_qwen_model_alias
+ensure_qwen_compat_alias
+
 if [[ "$RUN_SMOKE" == "1" ]]; then
   say "Running local Qwen smoke test."
   LOCAL_OPENAI_BASE_URL="$LOCAL_OPENAI_BASE_URL" \
-    LOCAL_OPENAI_MODEL="$QWEN_OLLAMA_MODEL" \
+    LOCAL_OPENAI_MODEL="$QWEN_OLLAMA_MODEL_ALIAS" \
     LOCAL_OPENAI_API_KEY="$LOCAL_OPENAI_API_KEY" \
     bash "${repo_root}/scripts/smoke-local-openai-compatible.sh"
 fi
@@ -327,6 +398,6 @@ say "Mac-side setup complete."
 say "Run the Qwen smoke workflow with:"
 say "  gh workflow run macos-qwen-local-model-smoke.yml"
 say
-say "If this Mac serves a nearby Linux gh-aw runner, make sure that runner can reach:"
+say "If this Mac serves the local Lima Linux gh-aw runner or another Linux host, make sure that runner can reach:"
 say "  ${LOCAL_OPENAI_BASE_URL}"
 say "Use EXPOSE_OLLAMA_TO_NETWORK=1 when the endpoint must be reachable beyond localhost."

@@ -1,108 +1,147 @@
-# gh-aw self-hosted runner and OpenRouter demonstrator
+# Self-hosted agentic workflow demonstrator
 
-This repository demonstrates GitHub Agentic Workflows running on self-hosted GitHub Actions runners and using OpenAI-compatible inference providers through OpenRouter or local Ollama.
+This repository demonstrates how GitHub Agentic Workflows can run on self-hosted GitHub Actions runners and talk to OpenAI-compatible inference endpoints that you control.
 
-The repo has five demo lanes:
+The two primary scenario guides are:
 
-- Azure VM runner: a `gh-aw` workflow routed to `[self-hosted, linux, x64, azure]`.
-- Cloudflare runner lane: a `gh-aw` workflow routed to `[self-hosted, linux, x64, cloudflare]`, with an explicit capability check for Docker, sudo, iptables, and egress.
-- OpenRouter inference: Codex is configured with `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and `OPENAI_API_KEY=${{ secrets.OPENROUTER_API_KEY }}`.
-- Local Mac Qwen/Ollama inference: a `gh-aw` workflow routed to `[self-hosted, linux, x64, local-macrunner-qwenollama]` and pointed at a Mac-hosted Ollama endpoint.
-- macOS local model runner: a regular GitHub Actions workflow routed to `[self-hosted, macOS, macos-local, local-model]` and pointed at a local OpenAI-compatible endpoint such as Ollama.
+- [Azure VM self-hosted runner with OpenRouter](infra/azure-vm/README.md)
+- [Local Mac self-hosted runner with Lima, Ollama, and Qwen](infra/local-macrunner-qwenollama/README.md)
+
+These lanes are examples, not limits. The point of the repository is to show the shape of the system: an agentic workflow can be pinned to a runner you operate, given the host capabilities it needs, and routed to whatever inference endpoint makes sense for your environment. Swap Azure for another VM provider, Lima for another Linux host, OpenRouter for another OpenAI-compatible gateway, or Ollama/Qwen for another local OpenAI-compatible model service.
+
+## What This Proves
+
+Agentic Workflows are ordinary GitHub Actions workflows after compilation, but the agent job has extra runtime needs. A self-hosted lane lets you control those needs directly:
+
+- The runner host can live in your cloud, your private network, or on your laptop.
+- The runner can have Docker, sudo, iptables, private network routes, local disks, GPUs, caches, or internal service access.
+- The model endpoint can be remote, private, local, metered, unmetered, small, large, hosted, or self-hosted, as long as the agent harness can call it.
+- The workflow still uses GitHub dispatch, logs, artifacts, permissions, labels, and reviewable generated lock files.
+
+The repository includes one external-inference lane and one all-local lane:
+
+```mermaid
+flowchart LR
+  subgraph "Azure/OpenRouter Example"
+    A["GitHub Agentic Workflow"] --> B["Azure VM self-hosted runner"]
+    B --> C["OpenRouter OpenAI-compatible API"]
+  end
+
+  subgraph "All-local Mac Example"
+    D["GitHub Agentic Workflow"] --> E["Lima Linux VM self-hosted runner"]
+    E --> F["Mac-hosted Ollama proxy"]
+    F --> G["Qwen model on the same Mac"]
+  end
+```
 
 ## Repository Map
 
-- `.github/workflows/azure-vm-openrouter.md` - agentic workflow for an Azure-hosted runner.
-- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow for a Linux runner wired to a Mac-hosted Qwen/Ollama endpoint.
-- `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow for a Cloudflare-labeled runner lane.
-- `.github/workflows/azure-runner-capability-smoke.yml` - deterministic smoke test for the Azure runner label lane and OpenRouter.
-- `.github/workflows/cloudflare-runner-capability-smoke.yml` - deterministic smoke test for the Cloudflare runner label lane and OpenRouter.
-- `.github/workflows/macos-local-model-smoke.yml` - deterministic smoke test for a macOS local-model runner.
-- `.github/workflows/macos-qwen-local-model-smoke.yml` - deterministic smoke test pinned to a Qwen-capable macOS runner.
-- `scripts/check-gh-aw-runner.sh` - validates the self-hosted runner requirements needed by `gh-aw`.
-- `scripts/smoke-openrouter.sh` - makes a minimal OpenRouter chat-completions request.
-- `scripts/check-macos-local-runner.sh` - validates the macOS local-model runner lane.
-- `scripts/smoke-local-openai-compatible.sh` - makes a minimal local OpenAI-compatible chat-completions request.
+- `.github/workflows/azure-vm-openrouter.md` - agentic workflow source for the Azure VM runner and OpenRouter lane.
+- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow source for the all-local Mac runner and Qwen/Ollama lane.
+- `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow source for a Cloudflare-labeled Linux runner lane.
+- `.github/workflows/*lock.yml` - generated executable GitHub Actions workflows produced by `gh aw compile`.
+- `.github/workflows/azure-runner-capability-smoke.yml` - deterministic Azure runner capability and OpenRouter smoke workflow.
+- `.github/workflows/macos-qwen-local-model-smoke.yml` - deterministic Qwen/Ollama smoke workflow for a macOS local model endpoint.
+- `scripts/check-gh-aw-runner.sh` - validates Linux runner requirements for `gh-aw`.
+- `scripts/smoke-openrouter.sh` - minimal OpenRouter chat-completions request.
+- `scripts/smoke-local-openai-compatible.sh` - minimal local OpenAI-compatible chat-completions request.
 - `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
-- `scripts/run-local-macrunner-qwenollama.sh` - starts or verifies the local Mac Qwen/Ollama `gh-aw` runner lane and dispatches the agentic workflow.
-- `infra/azure-vm/` - Azure VM bootstrap helper, config, and cloud-init template.
-- `infra/local-macrunner-qwenollama/` - Linux runner bootstrap for the local Mac Qwen/Ollama agentic lane.
-- `infra/macos/` - generic macOS runner registration/removal helpers, Qwen/Ollama setup, and local model notes.
-- `infra/cloudflare/` - Cloudflare runner notes and constraints.
+- `scripts/run-local-macrunner-qwenollama.sh` - all-in-one launcher for the local Mac/Lima/Ollama/Qwen agentic lane.
+- `infra/azure-vm/` - Azure VM runner bootstrap, cloud-init template, configuration, and scenario guide.
+- `infra/local-macrunner-qwenollama/` - all-local Mac plus Lima runner bootstrap and scenario guide.
+- `infra/macos/` - generic macOS runner and Qwen/Ollama setup helpers.
+- `infra/cloudflare/` - notes for a Cloudflare-labeled runner lane.
 
 ## Prerequisites
 
-Install the GitHub Agentic Workflows extension:
+Install the GitHub CLI and the Agentic Workflows extension:
 
 ```bash
+gh auth login
 gh extension install github/gh-aw
 ```
 
-Set the OpenRouter key as a repository secret:
-
-```bash
-gh aw secrets set OPENROUTER_API_KEY --value "$OPENROUTER_API_KEY"
-```
-
-Optionally set a model and attribution metadata for the smoke test:
-
-```bash
-gh variable set OPENROUTER_MODEL --body "openai/gpt-4o-mini"
-gh variable set OPENROUTER_SITE_URL --body "https://github.com/OWNER/REPO"
-gh variable set OPENROUTER_APP_NAME --body "gh-aw-self-hosted-demo"
-```
-
-For the smallest local Qwen/Ollama agent model endpoint on a Mac, use:
-
-```bash
-infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
-```
-
-If a nearby Linux `gh-aw` runner must reach that Mac over the network, expose the endpoint deliberately:
-
-```bash
-EXPOSE_OLLAMA_TO_NETWORK=1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
-```
-
-For the matching Linux `gh-aw` runner, run the same helper inside the Linux VM or host:
-
-```bash
-OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh
-```
-
-To start or verify that Linux runner and dispatch the local agent workflow in one command:
-
-```bash
-OLLAMA_UPSTREAM_BASE_URL=http://MAC_HOST_OR_IP:11434/v1 scripts/run-local-macrunner-qwenollama.sh
-```
-
-## Runner Labels
-
-Register self-hosted runners with these labels:
-
-```text
-self-hosted,linux,x64,azure,gh-aw
-self-hosted,linux,x64,local-macrunner-qwenollama,gh-aw
-self-hosted,linux,x64,cloudflare,gh-aw
-self-hosted,macOS,macos-local,local-model
-self-hosted,macOS,macos-local,local-model,qwen3-27b
-```
-
-`gh-aw` self-hosted runners must be Linux hosts with Docker, passwordless sudo for the runner service account, iptables support, and outbound HTTPS access to GitHub, GHCR, the selected engine endpoint, and any domains listed in the workflow network allowlist.
-
-## Compile
-
-Compile the Markdown workflows into generated GitHub Actions lock files:
+Compile the Markdown workflow sources into GitHub Actions lock files:
 
 ```bash
 gh aw compile --validate --actionlint
+scripts/patch-local-qwen-awf-pricing.sh
 ```
 
-The generated `.lock.yml` files are committed because they are the executable GitHub Actions workflows.
+The generated `.lock.yml` files are committed because GitHub Actions runs those files, not the Markdown workflow sources.
 
-## Run The Demos
+## Scenario 1: Azure VM Runner, OpenRouter Inference
 
-Run the deterministic smoke workflow first:
+Use this lane when you want the agent job to run on a Linux VM you operate, while model calls go through OpenRouter.
+
+Read the full guide:
+
+```bash
+open infra/azure-vm/README.md
+```
+
+Short version:
+
+```bash
+gh aw secrets set OPENROUTER_API_KEY --value "$OPENROUTER_API_KEY"
+infra/azure-vm/create-runner-vm.sh
+gh workflow run azure-runner-capability-smoke.yml
+gh aw run azure-vm-openrouter
+```
+
+Runner labels:
+
+```text
+self-hosted,linux,x64,azure,gh-aw
+```
+
+## Scenario 2: Local Mac Runner, Local Qwen/Ollama Inference
+
+Use this lane when you want the whole demonstrator on one Mac: GitHub Actions runner host, Linux agent runtime, and local model endpoint.
+
+Read the full guide:
+
+```bash
+open infra/local-macrunner-qwenollama/README.md
+```
+
+Short version:
+
+```bash
+scripts/run-local-macrunner-qwenollama.sh "Check the local agent lane."
+```
+
+The launcher starts or verifies Ollama on macOS, creates Qwen model aliases, boots an x86_64 Lima Linux VM, registers that VM as the GitHub Actions self-hosted runner, dispatches the workflow, and watches it.
+
+Runner labels:
+
+```text
+self-hosted,linux,x64,local-macrunner-qwenollama,gh-aw
+```
+
+Model defaults:
+
+```text
+Ollama source model: qwen2.5:0.5b
+Workflow model alias: qwen2.5-0.5b
+OpenCode model: openai/qwen2.5-0.5b
+```
+
+## Runner Requirements
+
+`gh-aw` self-hosted runners must be Linux hosts with:
+
+- Docker.
+- Passwordless sudo for the runner service account.
+- iptables support.
+- Outbound HTTPS access to GitHub, GHCR, and the selected engine endpoint.
+- Access to any domains listed in the workflow network allowlist.
+
+A macOS host cannot directly satisfy the Linux runner requirements for the `gh-aw` agent job, which is why the all-local Mac scenario uses Lima to run a local Linux VM. The Mac still owns the local model endpoint.
+
+## Running The Demos
+
+Deterministic smoke workflows:
 
 ```bash
 gh workflow run azure-runner-capability-smoke.yml
@@ -111,7 +150,7 @@ gh workflow run macos-local-model-smoke.yml
 gh workflow run macos-qwen-local-model-smoke.yml
 ```
 
-Then run an agentic workflow:
+Agentic workflows:
 
 ```bash
 gh aw run azure-vm-openrouter
@@ -119,8 +158,22 @@ scripts/run-local-macrunner-qwenollama.sh
 gh aw run cloudflare-runner-openrouter
 ```
 
-The agent will inspect the runner, confirm the provider routing, and summarize whether the lane is ready for agentic workloads.
+Inspect runs:
 
-## Cloudflare Note
+```bash
+gh run list --limit 10
+gh run view RUN_ID --log
+gh aw audit RUN_ID
+```
 
-Cloudflare Workers and Containers are useful deployment targets, but the `gh-aw` agent job itself needs host-level Docker and sudo/iptables. If a Cloudflare compute environment cannot provide those, use a Linux host reachable through Cloudflare Tunnel or another Cloudflare-managed/private network pattern, register that host as a GitHub Actions runner, and label it `cloudflare`.
+## Adapting The Pattern
+
+Use the included scenarios as starting points:
+
+- Change the runner labels to point at another host class.
+- Change the bootstrap scripts to install your internal dependencies.
+- Change `OPENAI_BASE_URL` and the engine config to point at another OpenAI-compatible gateway.
+- Change the model IDs and smoke tests to match your local inference service.
+- Add private network routes, mounted caches, GPUs, or internal tools to the self-hosted runner.
+
+The useful idea is not "Azure" or "Lima" specifically. The useful idea is that agentic workflows can run wherever your runner can run, and they can call whichever model endpoint you deliberately expose to that runner.

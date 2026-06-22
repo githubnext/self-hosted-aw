@@ -21,6 +21,10 @@ have() {
   command -v "$1" >/dev/null 2>&1
 }
 
+shell_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 truthy() {
   case "${1:-}" in
     1 | true | TRUE | yes | YES | y | Y) return 0 ;;
@@ -52,6 +56,35 @@ ensure_gh_aw() {
 
   say "Installing gh-aw extension."
   gh extension install github/gh-aw
+}
+
+ensure_lima() {
+  if have limactl; then
+    :
+  else
+    have brew || die "Lima is required for all-local Mac runner mode. Install Homebrew, or install Lima manually."
+
+    say "Installing Lima with Homebrew."
+    brew install lima
+  fi
+
+  if [[ "$(uname -s)" == "Darwin" && "$(uname -m)" == "arm64" && "$LIMA_ARCH" == "x86_64" ]]; then
+    ensure_lima_x86_guestagent
+  fi
+}
+
+ensure_lima_x86_guestagent() {
+  local lima_share
+
+  lima_share="$(brew --prefix lima 2>/dev/null)/share/lima"
+  if [[ -f "${lima_share}/lima-guestagent.Linux-x86_64" || -f "${lima_share}/lima-guestagent.Linux-x86_64.gz" ]]; then
+    return 0
+  fi
+
+  have brew || die "Homebrew is required to install Lima x86_64 guest agent support."
+
+  say "Installing Lima x86_64 guest agent support."
+  brew install lima-additional-guestagents
 }
 
 matching_runners() {
@@ -114,6 +147,99 @@ wait_for_runner() {
   done
 }
 
+setup_local_mac_endpoint() {
+  say "Setting up the Mac-hosted Qwen/Ollama endpoint."
+  LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
+    LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
+    LOCAL_AGENT_OPENCODE_MODEL="$LOCAL_AGENT_OPENCODE_MODEL" \
+    EXPOSE_OLLAMA_TO_NETWORK="${EXPOSE_OLLAMA_TO_NETWORK:-1}" \
+    REGISTER_MACOS_RUNNER=0 \
+    SET_GITHUB_VARIABLES=0 \
+    "${repo_root}/infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
+}
+
+start_lima_runner_vm() {
+  local instance="$1"
+  local status
+
+  ensure_lima
+
+  if limactl list -q | grep -Fx -- "$instance" >/dev/null 2>&1; then
+    status="$(limactl list "$instance" --format '{{.Status}}')"
+    if [[ "$status" == "Running" ]]; then
+      say "ok: Lima runner VM is already running: ${instance}"
+      return 0
+    fi
+
+    say "Starting existing Lima runner VM: ${instance}"
+    limactl start --yes "$instance" >/dev/null
+    return 0
+  fi
+
+  say "Creating local x86_64 Lima runner VM: ${instance}"
+  say "This can take a few minutes the first time."
+  limactl start --yes \
+    --name="$instance" \
+    --arch="$LIMA_ARCH" \
+    --vm-type="$LIMA_VM_TYPE" \
+    --cpus="$LIMA_CPUS" \
+    --memory="$LIMA_MEMORY" \
+    --disk="$LIMA_DISK" \
+    "$LIMA_TEMPLATE"
+}
+
+sync_repo_to_lima() {
+  local guest_repo="$1"
+  local guest_repo_quoted
+
+  guest_repo_quoted="$(shell_quote "$guest_repo")"
+  say "Syncing repository snapshot into Lima VM: ${guest_repo}"
+
+  COPYFILE_DISABLE=1 tar \
+    --exclude './.git' \
+    --exclude './self-hosted-aw' \
+    -C "$repo_root" \
+    -cf - . |
+    limactl shell "$LIMA_INSTANCE" -- bash -lc "rm -rf ${guest_repo_quoted} && mkdir -p ${guest_repo_quoted} && tar -xf - -C ${guest_repo_quoted}"
+}
+
+setup_local_lima_runner() {
+  local repo="$1"
+  local token
+  local guest_repo
+  local guest_repo_quoted
+  local upstream_base_url
+  local guest_arch
+
+  token="$(gh auth token)"
+  [[ -n "$token" ]] || die "Could not read a GitHub token from gh auth."
+
+  setup_local_mac_endpoint
+  start_lima_runner_vm "$LIMA_INSTANCE"
+
+  guest_arch="$(limactl shell "$LIMA_INSTANCE" -- uname -m)"
+  if [[ "$guest_arch" != "x86_64" ]]; then
+    die "Lima runner VM must be x86_64 for this workflow. ${LIMA_INSTANCE} is ${guest_arch}."
+  fi
+
+  guest_repo="$LIMA_GUEST_REPO_DIR"
+  sync_repo_to_lima "$guest_repo"
+  guest_repo_quoted="$(shell_quote "$guest_repo")"
+  upstream_base_url="${OLLAMA_UPSTREAM_BASE_URL:-http://host.lima.internal:11434/v1}"
+
+  say "Registering local Lima VM as the Linux gh-aw runner."
+  say "Ollama upstream from VM: ${upstream_base_url}"
+  limactl shell "$LIMA_INSTANCE" -- env \
+    GITHUB_REPOSITORY="$repo" \
+    GH_TOKEN="$token" \
+    GITHUB_TOKEN="$token" \
+    OLLAMA_UPSTREAM_BASE_URL="$upstream_base_url" \
+    LOCAL_AGENT_MODEL="$LOCAL_AGENT_MODEL" \
+    LOCAL_AGENT_MODEL_ALIAS="$LOCAL_AGENT_MODEL_ALIAS" \
+    LOCAL_AGENT_OPENCODE_MODEL="$LOCAL_AGENT_OPENCODE_MODEL" \
+    bash -lc "cd ${guest_repo_quoted} && infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
+}
+
 setup_runner_if_requested() {
   local repo="$1"
   local mode="$2"
@@ -121,7 +247,7 @@ setup_runner_if_requested() {
 
   case "$mode" in
     auto)
-      if [[ "$(uname -s)" == "Linux" ]]; then
+      if [[ "$(uname -s)" == "Linux" || "$(uname -s)" == "Darwin" ]]; then
         should_setup=1
       fi
       ;;
@@ -143,8 +269,18 @@ setup_runner_if_requested() {
     return 0
   fi
 
-  say "Setting up or starting the Linux local Mac Qwen/Ollama gh-aw runner."
-  GITHUB_REPOSITORY="$repo" "${repo_root}/infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
+  case "$(uname -s)" in
+    Darwin)
+      setup_local_lima_runner "$repo"
+      ;;
+    Linux)
+      say "Setting up or starting the Linux local Mac Qwen/Ollama gh-aw runner."
+      GITHUB_REPOSITORY="$repo" "${repo_root}/infra/local-macrunner-qwenollama/setup-tiny-qwen-agent.sh"
+      ;;
+    *)
+      die "Automatic runner setup is supported on macOS and Linux. Set SETUP_RUNNER=0 to dispatch only."
+      ;;
+  esac
 }
 
 latest_run_line() {
@@ -175,6 +311,17 @@ latest_run_line() {
 : "${WATCH:=1}"
 : "${DRY_RUN:=0}"
 : "${ENABLE_IF_NEEDED:=1}"
+: "${LOCAL_AGENT_MODEL:=qwen2.5:0.5b}"
+: "${LOCAL_AGENT_MODEL_ALIAS:=qwen2.5-0.5b}"
+: "${LOCAL_AGENT_OPENCODE_MODEL:=openai/${LOCAL_AGENT_MODEL_ALIAS}}"
+: "${LIMA_INSTANCE:=gh-aw-local-qwen}"
+: "${LIMA_TEMPLATE:=template:ubuntu-lts}"
+: "${LIMA_ARCH:=x86_64}"
+: "${LIMA_VM_TYPE:=qemu}"
+: "${LIMA_CPUS:=2}"
+: "${LIMA_MEMORY:=4}"
+: "${LIMA_DISK:=30}"
+: "${LIMA_GUEST_REPO_DIR:=/tmp/gh-aw-self-hosted-aw}"
 
 if [[ "$#" -gt 0 ]]; then
   PROMPT="$*"
@@ -190,10 +337,17 @@ say "repo: ${repo}"
 say "workflow: ${WORKFLOW_ID}"
 say "ref: ${REF}"
 say "runner labels: ${RUNNER_LABELS}"
+say "Ollama source model: ${LOCAL_AGENT_MODEL}"
+say "workflow model alias: ${LOCAL_AGENT_MODEL_ALIAS}"
+say "OpenCode model: ${LOCAL_AGENT_OPENCODE_MODEL}"
 say "prompt: ${PROMPT}"
 say
 
-setup_runner_if_requested "$repo" "$SETUP_RUNNER"
+if truthy "$DRY_RUN"; then
+  say "Dry run: skipping local runner setup and runner wait."
+elif ! truthy "$DRY_RUN"; then
+  setup_runner_if_requested "$repo" "$SETUP_RUNNER"
+fi
 
 if ! truthy "$DRY_RUN" && truthy "$WAIT_FOR_RUNNER"; then
   say "Waiting for a matching GitHub Actions runner."
