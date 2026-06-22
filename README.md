@@ -19,24 +19,6 @@ Of course, you mix and match any Actions runner with any inference host, as long
 
 Self-hosting runners gives you extra control over your Actions execution environment, and your choice of hosting platform. Choosing a model-routing platform like Open Router can give you access to additional models, and hosting your inference yourself can help control costs. Frontier models still require datacenter-scale resources to host, but there are models small enough to run on a MacBook Air that can still perform useful work. 
 
-## Repository Map
-
-- `.github/workflows/azure-vm-openrouter.md` - agentic workflow source for the Azure VM runner and OpenRouter lane.
-- `.github/workflows/local-macrunner-qwenollama.md` - agentic workflow source for the all-local Mac runner and Qwen/Ollama lane.
-- `.github/workflows/cloudflare-runner-openrouter.md` - agentic workflow source for a Cloudflare-labeled Linux runner lane.
-- `.github/workflows/*lock.yml` - generated executable GitHub Actions workflows produced by `gh aw compile`.
-- `.github/workflows/azure-runner-capability-smoke.yml` - deterministic Azure runner capability and OpenRouter smoke workflow.
-- `.github/workflows/macos-qwen-local-model-smoke.yml` - deterministic Qwen/Ollama smoke workflow for a macOS local model endpoint.
-- `scripts/check-gh-aw-runner.sh` - validates Linux runner requirements for `gh-aw`.
-- `scripts/smoke-openrouter.sh` - minimal OpenRouter chat-completions request.
-- `scripts/smoke-local-openai-compatible.sh` - minimal local OpenAI-compatible chat-completions request.
-- `scripts/check-qwen-only-models.sh` - fails if blocked local model-family identifiers appear in the repo.
-- `scripts/run-local-macrunner-qwenollama.sh` - all-in-one launcher for the local Mac/Lima/Ollama/Qwen agentic lane.
-- `infra/azure-vm/` - Azure VM runner bootstrap, cloud-init template, configuration, and scenario guide.
-- `infra/local-macrunner-qwenollama/` - all-local Mac plus Lima runner bootstrap and scenario guide.
-- `infra/macos/` - generic macOS runner and Qwen/Ollama setup helpers.
-- `infra/cloudflare/` - notes for a Cloudflare-labeled runner lane.
-
 ## Prerequisites
 
 Install the GitHub CLI and the Agentic Workflows extension:
