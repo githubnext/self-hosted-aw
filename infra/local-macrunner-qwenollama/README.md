@@ -192,7 +192,7 @@ The Linux setup:
 - Labels the runner `local-macrunner-qwenollama,gh-aw`.
 - Sets repository variables for the local agent endpoint and Qwen model alias when enabled.
 - Starts a `socat` proxy on `0.0.0.0:11435`.
-- Adds `host.docker.internal` on the Linux host so workflow steps and the `gh-aw` container can reach the proxy.
+- Adds `host.docker.internal` on the Linux host, mapped to Docker's bridge gateway, so both workflow steps and the chrooted `gh-aw` agent container can reach the proxy.
 
 Useful Linux setup overrides:
 
@@ -283,6 +283,12 @@ Confirm the Linux-side proxy is running and reachable:
 
 ```bash
 limactl shell gh-aw-local-qwen -- curl -fsS http://host.docker.internal:11435/v1/models
+```
+
+If the smoke test succeeds but `Execute OpenCode CLI` reports `ConnectionRefused` for `http://host.docker.internal:11435/v1/chat/completions`, refresh the Linux-side host alias:
+
+```bash
+limactl shell gh-aw-local-qwen -- bash -lc 'bridge_ip="$(docker network inspect bridge --format "{{range .IPAM.Config}}{{if .Gateway}}{{.Gateway}}{{end}}{{end}}" | sed -n "1p")" && sudo sed -i.bak "/[[:space:]]host\\.docker\\.internal\\([[:space:]]\\|$\\)/d" /etc/hosts && printf "%s host.docker.internal\n" "$bridge_ip" | sudo tee -a /etc/hosts'
 ```
 
 The Mac endpoint is not reachable from Lima:

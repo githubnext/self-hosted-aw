@@ -205,6 +205,18 @@ EOF
   sudo_cmd chmod 0644 "${runner_home}/.npmrc"
 }
 
+docker_host_gateway_ip() {
+  local gateway
+
+  gateway="$(docker network inspect bridge --format '{{range .IPAM.Config}}{{if .Gateway}}{{.Gateway}}{{end}}{{end}}' 2>/dev/null | sed -n '1p' || true)"
+  if [[ -z "$gateway" ]]; then
+    gateway="$(ip -4 addr show docker0 2>/dev/null | awk '/inet / { sub(/\/.*/, "", $2); print $2; exit }')"
+  fi
+
+  [[ -n "$gateway" ]] || die "Could not determine the Docker bridge host address for host.docker.internal."
+  printf '%s\n' "$gateway"
+}
+
 install_npm_wrapper() {
   if [[ ! -x /usr/bin/npm ]]; then
     return 0
@@ -320,12 +332,16 @@ select_upstream() {
 }
 
 configure_host_alias() {
-  if getent hosts host.docker.internal 2>/dev/null | awk '$1 == "127.0.0.1" { found = 1 } END { exit found ? 0 : 1 }'; then
+  local host_gateway
+
+  host_gateway="$(docker_host_gateway_ip)"
+  if getent hosts host.docker.internal 2>/dev/null | awk -v host_gateway="$host_gateway" '$1 == host_gateway { found = 1 } END { exit found ? 0 : 1 }'; then
     return 0
   fi
 
   sudo_cmd sed -i.bak '/[[:space:]]host\.docker\.internal\([[:space:]]\|$\)/d' /etc/hosts
-  printf '127.0.0.1 host.docker.internal\n' | sudo_cmd tee -a /etc/hosts >/dev/null
+  printf '%s host.docker.internal\n' "$host_gateway" | sudo_cmd tee -a /etc/hosts >/dev/null
+  say "Mapped host.docker.internal to Docker host gateway ${host_gateway}"
 }
 
 configure_ollama_proxy() {
