@@ -58,6 +58,19 @@ steps:
       persist-credentials: false
   - name: Check gh-aw runner prerequisites
     run: bash scripts/check-gh-aw-runner.sh
+  - name: Configure local model host alias
+    run: |
+      bridge_ip="$(docker network inspect bridge --format '{{range .IPAM.Config}}{{if .Gateway}}{{.Gateway}}{{end}}{{end}}' 2>/dev/null | sed -n '1p' || true)"
+      if [ -z "$bridge_ip" ]; then
+        bridge_ip="$(ip -4 addr show docker0 2>/dev/null | awk '/inet / { sub(/\/.*/, "", $2); print $2; exit }')"
+      fi
+      if [ -z "$bridge_ip" ]; then
+        echo "Could not determine Docker bridge host address for host.docker.internal" >&2
+        exit 1
+      fi
+      sudo sed -i.bak '/[[:space:]]host\.docker\.internal\([[:space:]]\|$\)/d' /etc/hosts
+      printf '%s host.docker.internal\n' "$bridge_ip" | sudo tee -a /etc/hosts >/dev/null
+      echo "Mapped host.docker.internal to Docker host gateway ${bridge_ip}"
   - name: Smoke test local Qwen/Ollama endpoint
     env:
       LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
