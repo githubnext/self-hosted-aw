@@ -1,0 +1,123 @@
+name: Nano Local Model Issue
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Prompt to send to the local model"
+        required: false
+        default: "Reply with exactly: nano ok"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  nano:
+    name: Ask local model and create issue
+    runs-on: [self-hosted, linux, x64, local-macrunner-qwenollama]
+    timeout-minutes: 10
+
+    steps:
+      - name: Configure local model host alias
+        run: |
+          bridge_ip="$(docker network inspect bridge --format '{{range .IPAM.Config}}{{if .Gateway}}{{.Gateway}}{{end}}{{end}}' 2>/dev/null | sed -n '1p' || true)"
+          if [ -z "$bridge_ip" ]; then
+            bridge_ip="$(ip -4 addr show docker0 2>/dev/null | awk '/inet / { sub(/\/.*/, "", $2); print $2; exit }')"
+          fi
+          if [ -z "$bridge_ip" ]; then
+            echo "Could not determine Docker bridge host address for host.docker.internal" >&2
+            exit 1
+          fi
+          sudo sed -i.bak '/[[:space:]]host\.docker\.internal\([[:space:]]\|$\)/d' /etc/hosts
+          printf '%s host.docker.internal\n' "$bridge_ip" | sudo tee -a /etc/hosts >/dev/null
+          echo "Mapped host.docker.internal to Docker host gateway ${bridge_ip}"
+
+      - name: Ask local model
+        id: ask
+        env:
+          LOCAL_OPENAI_BASE_URL: "${{ vars.LOCAL_AGENT_OPENAI_BASE_URL || 'http://host.docker.internal:11435/v1' }}"
+          LOCAL_OPENAI_MODEL: "${{ vars.LOCAL_AGENT_OPENAI_MODEL || 'qwen2.5-0.5b' }}"
+          LOCAL_OPENAI_API_KEY: "ollama"
+          PROMPT: "${{ inputs.prompt }}"
+        run: |
+          set -euo pipefail
+
+          jq -n \
+            --arg model "$LOCAL_OPENAI_MODEL" \
+            --arg prompt "$PROMPT" \
+            '{
+              model: $model,
+              stream: false,
+              temperature: 0,
+              messages: [
+                {
+                  role: "system",
+                  content: "Return only the direct answer as plain text. Do not use markdown, JSON, or tool calls."
+                },
+                {
+                  role: "user",
+                  content: $prompt
+                }
+              ]
+            }' > request.json
+
+          curl -fsS \
+            -H "Authorization: Bearer ${LOCAL_OPENAI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data @request.json \
+            "${LOCAL_OPENAI_BASE_URL%/}/chat/completions" > response.json
+
+          answer="$(jq -r '.choices[0].message.content // empty' response.json | sed -e 's/[[:space:]]\+$//')"
+          if [ -z "$answer" ]; then
+            echo "Local model returned an empty answer" >&2
+            jq . response.json >&2
+            exit 1
+          fi
+
+          delimiter="NANO_$(date +%s)_${RANDOM}"
+          {
+            echo "answer<<${delimiter}"
+            printf '%s\n' "$answer"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Local model response"
+            echo
+            echo '```'
+            printf '%s\n' "$answer"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create issue
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          GH_REPO: "${{ github.repository }}"
+          PROMPT: "${{ inputs.prompt }}"
+          ANSWER: "${{ steps.ask.outputs.answer }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          set -euo pipefail
+
+          jq -n \
+            --arg title "[nano] Local model response" \
+            --arg prompt "$PROMPT" \
+            --arg answer "$ANSWER" \
+            --arg run_url "$RUN_URL" \
+            '{
+              title: $title,
+              body: (
+                "Prompt:\n\n```\n" + $prompt + "\n```\n\n" +
+                "Model response:\n\n```\n" + $answer + "\n```\n\n" +
+                "Run: " + $run_url
+              )
+            }' > issue.json
+
+          issue_url="$(gh api "repos/${GH_REPO}/issues" --method POST --input issue.json --jq .html_url)"
+
+          {
+            echo "### Created issue"
+            echo
+            echo "$issue_url"
+          } >> "$GITHUB_STEP_SUMMARY"
